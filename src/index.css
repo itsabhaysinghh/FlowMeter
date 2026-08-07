@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-flostat-bg dark:bg-dark-bg text-flostat-text dark:text-dark-text font-sans selection:bg-flostat-secondary/20 selection:text-flostat-primary;
+  }
+}
+
+/* Custom Skeleton Pulse Shader */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.6) 25%,
+    rgba(241, 245, 249, 0.9) 37%,
+    rgba(226, 232, 240, 0.6) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.6) 25%,
+    rgba(51, 65, 85, 0.8) 37%,
+    rgba(30, 41, 59, 0.6) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
