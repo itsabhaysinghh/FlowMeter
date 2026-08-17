@@ -85,7 +85,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   };
 
   return (
-    <div className="flex flex-col p-6 bg-white dark:bg-dark-card border border-flostat-border dark:border-dark-border rounded-2xl shadow-flostat transition-all duration-300 relative">
+    <div className="flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] relative">
       {/* Card Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -109,15 +109,15 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         {/* Tab Controls & Date Range Selector */}
         <div className="flex items-center gap-2 relative">
           {showTabs && onTabChange && (
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60">
+            <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(tab.id)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                  className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
                     activeTab === tab.id
-                      ? 'bg-white dark:bg-dark-card text-flostat-primary dark:text-blue-400 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   {tab.label}

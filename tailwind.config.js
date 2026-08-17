@@ -27,11 +27,11 @@ export default {
           muted: '#64748B',
         },
         dark: {
-          bg: '#0B0F17',
-          card: '#151D2A',
-          border: '#2A364F',
-          text: '#F8FAFC',
-          muted: '#94A3B8',
+          bg: '#F8FAFC',
+          card: '#FFFFFF',
+          border: '#E5E7EB',
+          text: '#0F172A',
+          muted: '#64748B',
         }
       },
       fontFamily: {

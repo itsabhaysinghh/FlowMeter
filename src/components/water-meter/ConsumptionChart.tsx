@@ -213,16 +213,6 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
     <div className="w-full h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-          <defs>
-            <linearGradient id="consumptionGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2563EB" stopOpacity={0.9} />
-              <stop offset="100%" stopColor="#0B3B91" stopOpacity={0.7} />
-            </linearGradient>
-            <linearGradient id="peakGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F59E0B" stopOpacity={1} />
-              <stop offset="100%" stopColor="#D97706" stopOpacity={0.8} />
-            </linearGradient>
-          </defs>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.6} />
           <XAxis
             dataKey="label"
@@ -238,11 +228,11 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
             tickFormatter={(val) => `${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(241, 245, 249, 0.4)' }} />
-          <Bar dataKey="litres" radius={[6, 6, 0, 0]}>
+          <Bar dataKey="litres" radius={[4, 4, 0, 0]} fill="#2563EB">
             {chartData.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.isPeak ? 'url(#peakGradient)' : 'url(#consumptionGradient)'}
+                fill={entry.isPeak ? '#F59E0B' : '#2563EB'}
               />
             ))}
           </Bar>

@@ -59,7 +59,7 @@ export const FlowHistoryTable: React.FC<FlowHistoryTableProps> = ({ data }) => {
   const paginatedData = sortedData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="flex flex-col p-6 bg-white dark:bg-dark-card border border-flostat-border dark:border-dark-border rounded-2xl shadow-flostat">
+    <div className="flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
       {/* Table Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-flostat-border dark:border-dark-border">
         <div>
