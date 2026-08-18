@@ -21,13 +21,7 @@ import {
   Pie, 
   Cell, 
   Tooltip as RechartsTooltip, 
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  LineChart,
-  Line,
-  Legend
+  ResponsiveContainer
 } from 'recharts';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
 import { useWaterMeterData, getDevicePeriodConsumption } from '../hooks/useWaterMeterData';
@@ -710,20 +704,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const compareDelta = compareCurrentVal - comparePrevVal;
   const comparePct = comparePrevVal > 0 ? (compareDelta / comparePrevVal) * 100 : 0;
 
-  const compareTrendData = React.useMemo(() => {
-    const ticks = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-    const baseFlow = compareDevice === 'FLOSTAT_001' ? (data ? data.metrics.liveFlowRate : 15) : (compareDevice === 'FLOSTAT_002' ? 14.2 : compareDevice === 'FLOSTAT_003' ? 18.6 : 8.4);
-    
-    return ticks.map((tick, idx) => {
-      const curVal = Number((baseFlow + Math.sin(idx) * 2 + (idx % 2 === 0 ? 1 : -1) * 0.5).toFixed(1));
-      const prevVal = Number((baseFlow * 0.95 + Math.cos(idx) * 1.5 + (idx % 2 !== 0 ? 0.8 : -0.8) * 0.4).toFixed(1));
-      return {
-        label: tick,
-        'Current Period': curVal > 0 ? curVal : 0,
-        'Previous Period': prevVal > 0 ? prevVal : 0,
-      };
-    });
-  }, [compareDevice, data]);
+
 
   return (
     <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -1659,27 +1640,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
 
                     </div>
 
-                    {/* Side-by-Side overlay telemetry chart */}
-                    <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-4">
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Flow Profiles Overlay Comparison</h3>
-                        <p className="text-[10px] text-slate-500 mt-0.5">Flow rate curves compared between {curPeriodLabel} and {prevPeriodLabel}</p>
-                      </div>
 
-                      <div className="w-full h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={compareTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
-                            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10 }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10 }} unit=" L/m" />
-                            <RechartsTooltip />
-                            <Legend wrapperStyle={{ fontSize: '10px', marginTop: '10px' }} />
-                            <Line type="monotone" name={`${curPeriodLabel} Flow`} dataKey="Current Period" stroke="#2563EB" strokeWidth={2.5} activeDot={{ r: 5 }} />
-                            <Line type="monotone" name={`${prevPeriodLabel} Flow`} dataKey="Previous Period" stroke="#94A3B8" strokeWidth={2} strokeDasharray="4 4" />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
                   </>
                 );
               })()}

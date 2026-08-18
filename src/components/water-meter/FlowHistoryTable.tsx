@@ -40,8 +40,34 @@ export const FlowHistoryTable: React.FC<FlowHistoryTableProps> = ({ data }) => {
     });
   }, [data, searchTerm]);
 
+  const parseDate = (timeStr: string | null | undefined): number => {
+    if (!timeStr) return 0;
+
+    // Prioritize DD/MM/YYYY hh:mm:ss format (with optional AM/PM)
+    const match = timeStr.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})[,\s]+(\d{1,2}):(\d{2}):(\d{2})(?:\s*(AM|PM))?/i);
+    if (match) {
+      const [_, day, month, year, hourStr, minute, second, ampm] = match;
+      let hour = Number(hourStr);
+      if (ampm) {
+        if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
+        if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+      }
+      return new Date(Number(year), Number(month) - 1, Number(day), hour, Number(minute), Number(second)).getTime();
+    }
+
+    const parsed = Date.parse(timeStr);
+    if (!isNaN(parsed)) return parsed;
+    return 0;
+  };
+
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
+      if (sortField === 'time') {
+        const timeA = parseDate(a.time);
+        const timeB = parseDate(b.time);
+        return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+      
       let aVal = a[sortField];
       let bVal = b[sortField];
       if (typeof aVal === 'string') {
