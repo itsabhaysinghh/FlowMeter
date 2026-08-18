@@ -1,7 +1,7 @@
 export type DeviceStatus = 'online' | 'warning' | 'offline';
 export type ConnectionStatus = 'Connected' | 'Reconnecting' | 'Disconnected';
 export type FlowStatus = 'Normal' | 'Peak' | 'Low Flow' | 'Warning' | 'Offline';
-export type TimeRangeTab = 'today' | 'week' | 'month' | 'year' | 'custom';
+export type TimeRangeTab = 'today' | 'week' | 'specific' | 'month' | 'year' | 'custom';
 export type ModuleState = 'empty' | 'connected';
 
 export interface DeviceOption {
@@ -76,4 +76,20 @@ export interface LiveFlowRateApiResponse {
   device_id: string;
   flow_rate_lpm: number;
   device_timestamp: string;
+}
+
+export type DeleteDataMode = 'day' | 'date-range' | 'time-range';
+
+export interface DeleteFlowMeterDataRequest {
+  device_id: string;
+  /** Unix epoch seconds, converted from the IST value selected in the UI. */
+  start_time: number;
+  /** Unix epoch seconds, converted from the IST value selected in the UI. */
+  end_time: number;
+}
+
+export interface DeleteFlowMeterDataResult {
+  success: true;
+  deletedCount?: number;
+  message?: string;
 }

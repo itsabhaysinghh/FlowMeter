@@ -11,13 +11,16 @@ interface ChartCardProps {
   showTabs?: boolean;
   customDateRange?: DateRange;
   onCustomDateRangeChange?: (range: DateRange) => void;
+  specificDate?: string;
+  onSpecificDateChange?: (date: string) => void;
   children: React.ReactNode;
   extraHeaderAction?: React.ReactNode;
 }
 
 const TABS: { id: TimeRangeTab; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'week', label: 'Week' },
+  { id: 'today', label: 'Single Day Data' },
+  { id: 'week', label: 'One Week Data' },
+  { id: 'specific', label: 'Specific Date' },
   { id: 'month', label: 'Month' },
   { id: 'year', label: 'Year' },
   { id: 'custom', label: 'Custom' },
@@ -32,6 +35,8 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   showTabs = false,
   customDateRange = { startDate: '2026-07-01', endDate: '2026-07-20' },
   onCustomDateRangeChange,
+  specificDate = new Date().toISOString().split('T')[0],
+  onSpecificDateChange,
   children,
   extraHeaderAction,
 }) => {
@@ -123,6 +128,19 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                   {tab.label}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Active Specific Date Selector Trigger */}
+          {activeTab === 'specific' && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/50 text-xs font-semibold shadow-sm">
+              <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <input
+                type="date"
+                value={specificDate}
+                onChange={(e) => onSpecificDateChange?.(e.target.value)}
+                className="bg-transparent text-slate-800 dark:text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
+              />
             </div>
           )}
 

@@ -14,7 +14,8 @@ import {
   Download,
   Clock,
   Zap,
-  CreditCard
+  CreditCard,
+  Trash2,
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -23,8 +24,8 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer
 } from 'recharts';
-import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
-import { useWaterMeterData, getDevicePeriodConsumption } from '../hooks/useWaterMeterData';
+import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult } from '../types/meter.types';
+import { useWaterMeterData } from '../hooks/useWaterMeterData';
 import { meterService } from '../services/meter.service';
 import { MetricCard } from '../components/common/MetricCard';
 import { ChartCard } from '../components/common/ChartCard';
@@ -32,6 +33,7 @@ import { ConsumptionChart } from '../components/water-meter/ConsumptionChart';
 import { FlowTrendChart } from '../components/water-meter/FlowTrendChart';
 import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
 import { formatNumber } from '../utils/formatters';
+import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -40,11 +42,6 @@ export interface WaterMeterMonitoringPageProps {
   selectedDevice: DeviceOption | null;
   onDeviceChange?: (device: DeviceOption) => void;
 }
-
-// Deterministic consumption simulation for mock devices
-const getDeviceConsumption = (deviceId: string, tab: TimeRangeTab, customRange?: DateRange): number => {
-  return getDevicePeriodConsumption(deviceId, tab, customRange);
-};
 
 // Tooltip customization for donut slices
 const CustomPieTooltip = ({ active, payload }: any) => {
@@ -91,6 +88,8 @@ interface DeviceInlineDashboardProps {
   device: DeviceOption;
   activeTab: TimeRangeTab;
   customDateRange: DateRange;
+  specificDate?: string;
+  dataRefreshToken?: number;
   devStateOverride?: ModuleState;
   connectedStreamData?: WaterMeterDataResponse | null;
 }
@@ -99,13 +98,17 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
   device,
   activeTab,
   customDateRange,
+  specificDate,
+  dataRefreshToken,
   devStateOverride,
   connectedStreamData,
 }) => {
   const { state, data, lastRefreshed, refetch, refreshInterval, setRefreshInterval, apiError } = useWaterMeterData({
     activeTab,
     customDateRange,
+    specificDate,
     selectedDevice: device,
+    dataRefreshToken,
     devStateOverride,
     connectedStreamData,
   });
@@ -187,7 +190,7 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
         />
 
         <MetricCard
-          title={`${activeTab === 'today' ? "Today's" : activeTab === 'week' ? "This Week's" : activeTab === 'month' ? "This Month's" : "Custom Period"} Total Consumption`}
+          title={`${activeTab === 'today' ? "Single Day's" : activeTab === 'week' ? "One Week's" : activeTab === 'specific' ? `Specific Date (${specificDate})` : activeTab === 'month' ? "This Month's" : activeTab === 'year' ? "This Year's" : "Custom Period"} Total Consumption`}
           value={formatNumber(data.metrics.todaysConsumption, 1)}
           unit="Litres"
           subtitle={`Aggregated volume for ${device.name}`}
@@ -241,8 +244,9 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
 };
 
 const TABS: { id: TimeRangeTab; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'week', label: 'Week' },
+  { id: 'today', label: 'Single Day Data' },
+  { id: 'week', label: 'One Week Data' },
+  { id: 'specific', label: 'Specific Date' },
   { id: 'month', label: 'Month' },
   { id: 'year', label: 'Year' },
   { id: 'custom', label: 'Custom' },
@@ -257,6 +261,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
 }) => {
   const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'billing'>('overview');
   const [activeTab, setActiveTab] = useState<TimeRangeTab>('today');
+  const [specificDate, setSpecificDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [customDateRange, setCustomDateRange] = useState<DateRange>({
     startDate: '2026-07-01',
     endDate: '2026-07-20',
@@ -270,6 +275,9 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const [pinnedDevices, setPinnedDevices] = useState<string[]>(['FLOSTAT_001']);
   const [favoriteDevices, setFavoriteDevices] = useState<string[]>([]);
   const [exportNotification, setExportNotification] = useState<string | null>(null);
+  const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
+  const [deletionNotification, setDeletionNotification] = useState<string | null>(null);
+  const [dataRefreshToken, setDataRefreshToken] = useState(0);
 
   // Comparison mode selections
   const [compareDevice, setCompareDevice] = useState<string>('FLOSTAT_001');
@@ -390,13 +398,44 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const { data, refreshInterval, setRefreshInterval, refetch } = useWaterMeterData({
     activeTab,
     customDateRange,
+    specificDate,
     selectedDevice: devices.find((d) => d.id === 'FLOSTAT_001') || selectedDevice,
+    dataRefreshToken,
     devStateOverride,
     connectedStreamData: connectedDataStream,
   });
 
-  const flostat001Val = data ? data.metrics.todaysConsumption : 2450;
-  const flostat001Flow = data ? data.metrics.liveFlowRate : 0;
+  const [deviceSnapshots, setDeviceSnapshots] = useState<Record<string, { consumption: number; flowRate: number }>>({});
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadDeviceSnapshots() {
+      const snapshots = await Promise.all(devices.map(async (device) => {
+        const [summary, live] = await Promise.all([
+          meterService.getConsumption(activeTab, device.id, customDateRange, specificDate),
+          meterService.getLiveFlowRate(device.id),
+        ]);
+        return [device.id, {
+          consumption: summary?.total_volume_litres ?? 0,
+          flowRate: live?.liveFlowRate ?? 0,
+        }] as const;
+      }));
+      if (active) setDeviceSnapshots(Object.fromEntries(snapshots));
+    }
+    void loadDeviceSnapshots();
+    return () => { active = false; };
+  }, [activeTab, customDateRange, dataRefreshToken, devices, specificDate]);
+
+  const getDeviceConsumption = React.useCallback((deviceId: string) => {
+    return deviceSnapshots[deviceId]?.consumption ?? 0;
+  }, [deviceSnapshots]);
+
+  const getDeviceFlowRate = React.useCallback((deviceId: string) => {
+    return deviceSnapshots[deviceId]?.flowRate ?? 0;
+  }, [deviceSnapshots]);
+
+  const flostat001Val = data?.metrics.todaysConsumption ?? getDeviceConsumption('FLOSTAT_001');
+  const flostat001Flow = data?.metrics.liveFlowRate ?? getDeviceFlowRate('FLOSTAT_001');
 
   const flostat001Status = data ? data.metadata.deviceStatus : 'online';
 
@@ -420,23 +459,23 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     {
       name: 'FLOSTAT_002',
       location: 'Ground Tank',
-      value: getDeviceConsumption('FLOSTAT_002', activeTab, customDateRange),
-      flowRate: 14.2,
+      value: getDeviceConsumption('FLOSTAT_002'),
+      flowRate: getDeviceFlowRate('FLOSTAT_002'),
       status: 'online',
       color: deviceColors.FLOSTAT_002,
     },
     {
       name: 'FLOSTAT_003',
       location: 'Block A Tank',
-      value: getDeviceConsumption('FLOSTAT_003', activeTab, customDateRange),
-      flowRate: 18.6,
+      value: getDeviceConsumption('FLOSTAT_003'),
+      flowRate: getDeviceFlowRate('FLOSTAT_003'),
       status: 'online',
       color: deviceColors.FLOSTAT_003,
     },
     {
       name: 'FLOSTAT_004',
       location: 'Block B Tank',
-      value: getDeviceConsumption('FLOSTAT_004', activeTab, customDateRange),
+      value: getDeviceConsumption('FLOSTAT_004'),
       flowRate: 0,
       status: 'offline',
       color: deviceColors.FLOSTAT_004,
@@ -444,8 +483,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     {
       name: 'FLOSTAT_005',
       location: 'Fire Tank',
-      value: getDeviceConsumption('FLOSTAT_005', activeTab, customDateRange),
-      flowRate: 8.4,
+      value: getDeviceConsumption('FLOSTAT_005'),
+      flowRate: getDeviceFlowRate('FLOSTAT_005'),
       status: 'online',
       color: deviceColors.FLOSTAT_005,
     },
@@ -530,14 +569,14 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
       result = result.filter(d => d.status === 'offline');
     } else if (filterPill === 'highest') {
       result = [...result].sort((a, b) => {
-        const consA = a.id === 'FLOSTAT_001' ? flostat001Val : getDeviceConsumption(a.id, activeTab, customDateRange);
-        const consB = b.id === 'FLOSTAT_001' ? flostat001Val : getDeviceConsumption(b.id, activeTab, customDateRange);
+        const consA = getDeviceConsumption(a.id);
+        const consB = getDeviceConsumption(b.id);
         return consB - consA;
       });
     } else if (filterPill === 'lowest') {
       result = [...result].sort((a, b) => {
-        const consA = a.id === 'FLOSTAT_001' ? flostat001Val : getDeviceConsumption(a.id, activeTab, customDateRange);
-        const consB = b.id === 'FLOSTAT_001' ? flostat001Val : getDeviceConsumption(b.id, activeTab, customDateRange);
+        const consA = getDeviceConsumption(a.id);
+        const consB = getDeviceConsumption(b.id);
         return consA - consB;
       });
     }
@@ -552,7 +591,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     });
 
     return result;
-  }, [devices, searchTerm, filterPill, pinnedDevices, activeTab, customDateRange, flostat001Val]);
+  }, [devices, searchTerm, filterPill, pinnedDevices, getDeviceConsumption]);
 
 
 
@@ -653,44 +692,28 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     async function fetchCompareData() {
       const dates = getComparisonBoundaries();
       
-      if (compareDevice !== 'FLOSTAT_001') {
-        const curValue = getDevicePeriodConsumption(compareDevice, 'custom', { 
-          startDate: dates.current.startStr, 
-          endDate: dates.current.endStr 
-        });
-        const prevValue = getDevicePeriodConsumption(compareDevice, 'custom', { 
-          startDate: dates.previous.startStr, 
-          endDate: dates.previous.endStr 
-        });
+      try {
+        setIsCompareLoading(true);
+        const [curRes, prevRes] = await Promise.all([
+          meterService.getConsumption('custom', compareDevice, {
+            startDate: dates.current.startStr,
+            endDate: dates.current.endStr,
+          }),
+          meterService.getConsumption('custom', compareDevice, {
+            startDate: dates.previous.startStr,
+            endDate: dates.previous.endStr,
+          })
+        ]);
         
         if (active) {
-          setCompareCurrentVal(curValue);
-          setComparePrevVal(prevValue);
+          setCompareCurrentVal(curRes ? curRes.total_volume_litres : 0);
+          setComparePrevVal(prevRes ? prevRes.total_volume_litres : 0);
         }
-      } else {
-        try {
-          setIsCompareLoading(true);
-          const [curRes, prevRes] = await Promise.all([
-            meterService.getConsumption('custom', 'FLOSTAT_001', {
-              startDate: dates.current.startStr,
-              endDate: dates.current.endStr,
-            }),
-            meterService.getConsumption('custom', 'FLOSTAT_001', {
-              startDate: dates.previous.startStr,
-              endDate: dates.previous.endStr,
-            })
-          ]);
-          
-          if (active) {
-            setCompareCurrentVal(curRes ? curRes.total_volume_litres : 0);
-            setComparePrevVal(prevRes ? prevRes.total_volume_litres : 0);
-          }
-        } catch (err) {
-          console.error("Failed to fetch AWS comparison data:", err);
-        } finally {
-          if (active) {
-            setIsCompareLoading(false);
-          }
+      } catch (err) {
+        console.error("Failed to fetch backend comparison data:", err);
+      } finally {
+        if (active) {
+          setIsCompareLoading(false);
         }
       }
     }
@@ -703,6 +726,17 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
 
   const compareDelta = compareCurrentVal - comparePrevVal;
   const comparePct = comparePrevVal > 0 ? (compareDelta / comparePrevVal) * 100 : 0;
+
+  const handleDataDeleted = (result: DeleteFlowMeterDataResult, deviceId: string) => {
+    setDataRefreshToken((token) => token + 1);
+    refetch();
+
+    const countMessage = result.deletedCount === undefined
+      ? 'Data deleted successfully.'
+      : `Successfully deleted ${new Intl.NumberFormat('en-IN').format(result.deletedCount)} record${result.deletedCount === 1 ? '' : 's'} from ${deviceId}.`;
+    setDeletionNotification(countMessage);
+    window.setTimeout(() => setDeletionNotification(null), 5000);
+  };
 
 
 
@@ -775,6 +809,13 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
           )}
         </div>
       </div>
+
+      {deletionNotification && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-300">
+          <span>{deletionNotification}</span>
+          <button type="button" onClick={() => setDeletionNotification(null)} className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-100" aria-label="Dismiss success message">×</button>
+        </div>
+      )}
 
       {/* Main Two-Column Sidebar Layout */}
       <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-140px)]">
@@ -879,6 +920,19 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       </button>
                     ))}
                   </div>
+
+                  {activeTab === 'specific' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-slate-500 font-medium">Select Date:</span>
+                      <input
+                        type="date"
+                        value={specificDate}
+                        onChange={(e) => setSpecificDate(e.target.value)}
+                        className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
+                      />
+                    </div>
+                  )}
 
                   {activeTab === 'custom' && (
                     <div className="relative inline-block text-left" ref={popoverRef}>
@@ -993,7 +1047,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                           {formatNumber(totalConsumption, 0)} L
                         </span>
                         <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase mt-0.5">
-                          {activeTab}
+                          {activeTab === 'today' ? 'Single Day' : activeTab === 'week' ? 'One Week' : activeTab === 'specific' ? specificDate : activeTab}
                         </span>
                       </div>
                     </div>
@@ -1147,6 +1201,15 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     </button>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteDataOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-xs font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 dark:border-rose-900/60 dark:bg-dark-card dark:text-rose-400 dark:hover:bg-rose-950/25"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete Data</span>
+                  </button>
+
                   {/* Date range filter picker */}
                   <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200">
                     {TABS.map((tab) => (
@@ -1281,8 +1344,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                         </tr>
                       ) : (
                         filteredAndSortedDevices.map((device) => {
-                          const deviceCons = device.id === 'FLOSTAT_001' ? flostat001Val : getDeviceConsumption(device.id, activeTab, customDateRange);
-                          const deviceFlow = device.id === 'FLOSTAT_001' ? flostat001Flow : device.id === 'FLOSTAT_002' ? 14.2 : device.id === 'FLOSTAT_003' ? 18.6 : device.id === 'FLOSTAT_005' ? 8.4 : 0;
+                          const deviceCons = getDeviceConsumption(device.id);
+                          const deviceFlow = getDeviceFlowRate(device.id);
                           const isExpanded = expandedDeviceId === device.id;
                           const isPinned = pinnedDevices.includes(device.id);
                           const isFavorite = favoriteDevices.includes(device.id);
@@ -1398,6 +1461,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                                       device={device}
                                       activeTab={activeTab}
                                       customDateRange={customDateRange}
+                                      specificDate={specificDate}
+                                      dataRefreshToken={dataRefreshToken}
                                       devStateOverride={devStateOverride}
                                       connectedStreamData={connectedDataStream}
                                     />
@@ -1881,25 +1946,25 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                             id: 'FLOSTAT_002',
                             name: 'FLOSTAT_002',
                             location: 'Ground Tank',
-                            value: getDeviceConsumption('FLOSTAT_002', activeTab, customDateRange),
+                            value: getDeviceConsumption('FLOSTAT_002'),
                           },
                           {
                             id: 'FLOSTAT_003',
                             name: 'FLOSTAT_003',
                             location: 'Block A Tank',
-                            value: getDeviceConsumption('FLOSTAT_003', activeTab, customDateRange),
+                            value: getDeviceConsumption('FLOSTAT_003'),
                           },
                           {
                             id: 'FLOSTAT_004',
                             name: 'FLOSTAT_004',
                             location: 'Block B Tank',
-                            value: getDeviceConsumption('FLOSTAT_004', activeTab, customDateRange),
+                            value: getDeviceConsumption('FLOSTAT_004'),
                           },
                           {
                             id: 'FLOSTAT_005',
                             name: 'FLOSTAT_005',
                             location: 'Fire Hydrant Tank',
-                            value: getDeviceConsumption('FLOSTAT_005', activeTab, customDateRange),
+                            value: getDeviceConsumption('FLOSTAT_005'),
                           },
                         ];
 
@@ -1962,6 +2027,14 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
 
         </div>
       </div>
+
+      <DeleteDataDialog
+        isOpen={isDeleteDataOpen}
+        devices={devices}
+        initialDeviceId={selectedDevice?.id}
+        onClose={() => setIsDeleteDataOpen(false)}
+        onDeleted={handleDataDeleted}
+      />
     </div>
   );
 };

@@ -7,12 +7,17 @@ import type {
   MeterMetadata,
   DeviceOption,
   SummaryResponse,
-  DeviceStatus
+  DeviceStatus,
+  DeleteFlowMeterDataRequest,
+  DeleteFlowMeterDataResult,
 } from '../types/meter.types';
 import { formatLastSeen } from '../utils/formatters';
+import { getIstPeriodRange } from '../utils/ist';
 
 // Retrieve base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://zohk43tmnj.execute-api.ap-south-1.amazonaws.com/dev-flow';
+// An override supports a separately deployed delete route; the local backend uses this API base path.
+const DELETE_FLOW_DATA_API_URL = import.meta.env.VITE_DELETE_FLOW_DATA_API_URL || `${API_BASE_URL}/v1/flow/data`;
 
 export class MeterService {
   private devicesCache: DeviceOption[] | null = null;
@@ -137,60 +142,19 @@ export class MeterService {
     customDateRange?: {
         startDate: string;
         endDate: string;
-    }
+    },
+    specificDate?: string
   ): Promise<SummaryResponse | null> {
     try {
-      let now = new Date(); 
-      let startDate = new Date(now);
-      let interval = "hour";
-      switch (period) {
-        case "today":
-          startDate = new Date(now);
-          startDate.setHours(0, 0, 0, 0);
-          interval = "hour";
-          break;
-        case "week":
-          startDate = new Date();
-          startDate.setHours(0, 0, 0, 0);
-          startDate.setDate(startDate.getDate() - 6);
-          interval = "day";
-          break;
-
-        case "month":
-          startDate = new Date();
-          startDate.setHours(0, 0, 0, 0);
-          startDate.setMonth(startDate.getMonth() - 1);
-          interval = "day";
-          break;
-
-        case "year":
-          startDate = new Date();
-          startDate.setHours(0, 0, 0, 0);
-          startDate.setFullYear(startDate.getFullYear() - 1);
-          interval = "month";
-          break;
-
-        case "custom":
-          if (customDateRange) {
-              startDate = new Date(customDateRange.startDate);
-              startDate.setHours(0, 0, 0, 0);
-              now = new Date(customDateRange.endDate);
-              now.setHours(23, 59, 59, 999);
-              interval = "day";
-          }
-          break;
-      default:
-          startDate.setHours(0,0,0,0);
-          interval = "hour";
-      }
+      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate);
 
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/summary`,
         {
           params: {
             device_id: meterId,
-            start: Math.floor(startDate.getTime() / 1000),
-            end: Math.floor(now.getTime() / 1000),
+            start,
+            end,
             interval
           },
           timeout: 5000,
@@ -207,24 +171,23 @@ export class MeterService {
    * Fetches 1-minute interval flow rate trend data points for smooth line visualization
    */
   async getFlowTrend(
-    meterId?: string
+    meterId?: string,
+    period: TimeRangeTab = 'today',
+    customDateRange?: { startDate: string; endDate: string },
+    specificDate?: string,
   ): Promise<FlowTrendDataPoint[] | null> {
 
     try {
-
-      const now = new Date();
-
-      const start = new Date(now);
-      start.setHours(0,0,0,0);
+      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate);
 
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/summary`,
         {
           params:{
             device_id: meterId,
-            start: Math.floor(start.getTime()/1000),
-            end: Math.floor(now.getTime()/1000),
-            interval:"hour"
+            start,
+            end,
+            interval,
           }
         }
       );
@@ -240,14 +203,18 @@ export class MeterService {
    * Fetches historical flow logs table with pagination & sorting parameters
    */
   async getFlowHistory(
-    _params?: { page?: number; limit?: number; search?: string; sortBy?: string },
-    meterId?: string
+    params?: { page?: number; limit?: number; search?: string; sortBy?: string },
+    meterId?: string,
+    period: TimeRangeTab = 'today',
+    customDateRange?: { startDate: string; endDate: string },
+    specificDate?: string,
   ): Promise<FlowHistoryRecord[] | null> {
     try {
+      const { start, end } = getIstPeriodRange(period, customDateRange, specificDate);
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/history`,
         {
-          params: meterId ? { device_id: meterId } : undefined,
+          params: meterId ? { device_id: meterId, start_time: start, end_time: end, limit: params?.limit ?? 100 } : undefined,
           timeout: 5000,
         }
       );
@@ -268,6 +235,47 @@ export class MeterService {
     } catch (err) {
       console.error(err);
       return null;
+    }
+  }
+
+  /**
+   * Permanently removes server-side readings for one device and an inclusive
+   * Unix-second range. DynamoDB access remains exclusively in the backend.
+   */
+  async deleteFlowMeterData(
+    request: DeleteFlowMeterDataRequest,
+  ): Promise<DeleteFlowMeterDataResult> {
+    if (!request.device_id || !Number.isFinite(request.start_time) || !Number.isFinite(request.end_time)) {
+      throw new Error('A device and valid deletion timestamps are required.');
+    }
+    if (request.start_time > request.end_time) {
+      throw new Error('The deletion start time must be before the end time.');
+    }
+
+    try {
+      const response = await axios.delete(DELETE_FLOW_DATA_API_URL, {
+        data: request,
+        timeout: 30000,
+      });
+      const body = response.data?.data ?? response.data;
+      const isConfirmed = body?.success === true || response.data?.success === true;
+
+      if (!isConfirmed) {
+        throw new Error(body?.message || response.data?.message || 'The delete API did not confirm the deletion.');
+      }
+
+      const rawDeletedCount = body?.deleted_count ?? body?.deletedCount ?? response.data?.deleted_count ?? response.data?.deletedCount;
+      const deletedCount = Number(rawDeletedCount);
+      return {
+        success: true,
+        deletedCount: Number.isFinite(deletedCount) ? deletedCount : undefined,
+        message: body?.message || response.data?.message,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || error.response?.data?.error || 'Unable to delete data. Please try again.');
+      }
+      throw error;
     }
   }
 
