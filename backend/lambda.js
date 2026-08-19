@@ -21,11 +21,17 @@ export async function handler(event) {
   const query = event.queryStringParameters || {};
   const origin = event.headers?.origin || '*';
 
+  // Standard web security headers & CORS
   const headers = {
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': origin,
     'access-control-allow-headers': 'content-type, x-api-key',
     'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains',
+    'x-xss-protection': '1; mode=block',
+    'referrer-policy': 'no-referrer',
   };
 
   if (httpMethod === 'OPTIONS') {

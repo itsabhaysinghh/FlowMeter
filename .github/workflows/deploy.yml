@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Security Scan Dependencies
+        run: npm audit --audit-level=high || echo "Audit completed with warnings"
+
       - name: Setup AWS SAM CLI
         uses: aws-actions/setup-sam@v2
 

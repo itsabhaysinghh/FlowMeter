@@ -18,7 +18,7 @@ Globals:
 
 Resources:
   # =================================================================
-  # 1. DYNAMODB TABLES
+  # 1. DYNAMODB TABLES (With KMS Encryption & Point-in-time Recovery)
   # =================================================================
   
   # Table 1: Device Metadata & Registration
@@ -37,6 +37,8 @@ Resources:
           KeyType: HASH
         - AttributeName: flow_meter_id
           KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       Tags:
@@ -61,6 +63,8 @@ Resources:
           KeyType: HASH
         - AttributeName: timestamp
           KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       Tags:
@@ -70,12 +74,16 @@ Resources:
           Value: Flostat
 
   # =================================================================
-  # 2. HTTP API GATEWAY
+  # 2. HTTP API GATEWAY (With Rate Limiting & Throttling Protection)
   # =================================================================
   FlostatHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       Name: FlostatHttpApi
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: true
+        ThrottlingBurstLimit: 200
+        ThrottlingRateLimit: 100
       CorsConfiguration:
         AllowOrigins:
           - "*"
