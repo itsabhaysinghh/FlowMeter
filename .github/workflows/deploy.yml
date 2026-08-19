@@ -38,13 +38,6 @@ jobs:
           aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
           aws cloudformation wait stack-delete-complete --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
 
-      - name: Ensure Deployment S3 Bucket Exists
-        run: |
-          aws s3api create-bucket \
-            --bucket flostat-sam-bucket-502830865576 \
-            --region ap-south-1 \
-            --create-bucket-configuration LocationConstraint=ap-south-1 || true
-
       - name: SAM Build Infrastructure
         run: sam build
 
@@ -56,5 +49,5 @@ jobs:
             --stack-name flostat-flow-serverless-stack \
             --region ap-south-1 \
             --capabilities CAPABILITY_IAM \
-            --s3-bucket flostat-sam-bucket-502830865576 \
+            --resolve-s3 \
             --s3-prefix flostat-backend
