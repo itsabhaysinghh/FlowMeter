@@ -35,7 +35,10 @@ jobs:
 
       - name: Create Dedicated Deployment Bucket
         run: |
-          aws s3 mb s3://flostat-deploy-502830865576-mumbai --region ap-south-1 || true
+          aws s3api create-bucket \
+            --bucket flostat-deploy-502830865576-mumbai \
+            --region ap-south-1 \
+            --create-bucket-configuration LocationConstraint=ap-south-1
 
       - name: SAM Build Infrastructure
         run: sam build
