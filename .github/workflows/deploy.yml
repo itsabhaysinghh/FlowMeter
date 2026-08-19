@@ -33,10 +33,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      - name: Clean Up Rolled-Back Helper Stack
+      - name: Create Dedicated Deployment Bucket
         run: |
-          aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
-          aws cloudformation wait stack-delete-complete --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
+          aws s3 mb s3://flostat-deploy-502830865576-mumbai --region ap-south-1 || true
 
       - name: SAM Build Infrastructure
         run: sam build
@@ -49,5 +48,5 @@ jobs:
             --stack-name flostat-flow-serverless-stack \
             --region ap-south-1 \
             --capabilities CAPABILITY_IAM \
-            --resolve-s3 \
+            --s3-bucket flostat-deploy-502830865576-mumbai \
             --s3-prefix flostat-backend
