@@ -1,8 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  Flostat Flow Meter Infrastructure
-  AWS Region: ap-south-1 (Mumbai) | Account: 502830865576
+Description: Flostat Flow Meter Backend Serverless Stack
 
 Globals:
   Function:
@@ -11,16 +9,10 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
-        AWS_REGION: ap-south-1
         FLOW_DEVICE_TABLE: !Ref FlostatFlowDeviceTable
         FLOW_METER_TABLE: !Ref FlostatFlowMeterTable
 
 Resources:
-  # =================================================================
-  # 1. DYNAMODB TABLES (With KMS Encryption & Point-in-Time Recovery)
-  # =================================================================
-  
-  # Table 1: Device Metadata & Registration
   FlostatFlowDeviceTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -40,13 +32,7 @@ Resources:
         SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      Tags:
-        - Key: Environment
-          Value: Production
-        - Key: Project
-          Value: Flostat
 
-  # Table 2: Flow Metrics Time-Series Data
   FlostatFlowMeterTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -66,52 +52,32 @@ Resources:
         SSEEnabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
-      Tags:
-        - Key: Environment
-          Value: Production
-        - Key: Project
-          Value: Flostat
 
-  # =================================================================
-  # 2. HTTP API GATEWAY
-  # =================================================================
   FlostatHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       Name: FlostatHttpApi
-      CorsConfiguration:
-        AllowOrigins:
-          - "*"
-        AllowMethods:
-          - GET
-          - POST
-          - DELETE
-          - OPTIONS
-        AllowHeaders:
-          - "*"
+      CorsConfiguration: true
 
-  # =================================================================
-  # 3. AWS LAMBDA BACKEND FUNCTION
-  # =================================================================
   FlostatApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: backend/
       Handler: lambda.handler
-      Description: Core serverless API for Flostat flow meter data ingestion & query
+      Description: Flostat Serverless Lambda Handler
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref FlostatFlowDeviceTable
         - DynamoDBCrudPolicy:
             TableName: !Ref FlostatFlowMeterTable
       Events:
-        ApiRouteProxy:
+        ProxyApi:
           Type: HttpApi
           Properties:
             Path: /{proxy+}
             Method: ANY
             ApiId: !Ref FlostatHttpApi
-        ApiRouteRoot:
+        RootApi:
           Type: HttpApi
           Properties:
             Path: /
@@ -120,11 +86,11 @@ Resources:
 
 Outputs:
   ApiEndpoint:
-    Description: "Live HTTP API Gateway Endpoint URL (Mumbai ap-south-1)"
+    Description: HTTP API Gateway Endpoint URL
     Value: !Sub "https://${FlostatHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
   DeviceTableName:
-    Description: "Flostat Flow Device Table Name"
+    Description: Flostat Flow Device Table Name
     Value: !Ref FlostatFlowDeviceTable
   MeterTableName:
-    Description: "Flostat Flow Meter Table Name"
+    Description: Flostat Flow Meter Table Name
     Value: !Ref FlostatFlowMeterTable
