@@ -9,7 +9,6 @@ Globals:
     Timeout: 15
     MemorySize: 256
     Runtime: nodejs20.x
-    Architecture: x86_64
     Environment:
       Variables:
         AWS_REGION: ap-south-1
@@ -18,7 +17,7 @@ Globals:
 
 Resources:
   # =================================================================
-  # 1. DYNAMODB TABLES (With KMS Encryption & Point-in-time Recovery)
+  # 1. DYNAMODB TABLES (With KMS Encryption & Point-in-Time Recovery)
   # =================================================================
   
   # Table 1: Device Metadata & Registration
@@ -74,16 +73,12 @@ Resources:
           Value: Flostat
 
   # =================================================================
-  # 2. HTTP API GATEWAY (With Rate Limiting & Throttling Protection)
+  # 2. HTTP API GATEWAY
   # =================================================================
   FlostatHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       Name: FlostatHttpApi
-      DefaultRouteSettings:
-        DetailedMetricsEnabled: true
-        ThrottlingBurstLimit: 200
-        ThrottlingRateLimit: 100
       CorsConfiguration:
         AllowOrigins:
           - "*"
