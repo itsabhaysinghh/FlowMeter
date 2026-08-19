@@ -9,6 +9,7 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
+        AWS_REGION: ap-south-1
         FLOW_DEVICE_TABLE: !Ref FlostatFlowDeviceTable
         FLOW_METER_TABLE: !Ref FlostatFlowMeterTable
 
@@ -62,8 +63,8 @@ Resources:
   FlostatApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: backend/
-      Handler: lambda.handler
+      CodeUri: ./
+      Handler: backend/lambda.handler
       Description: Flostat Serverless Lambda Handler
       Policies:
         - DynamoDBCrudPolicy:
