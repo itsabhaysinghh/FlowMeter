@@ -33,6 +33,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
+      - name: Clean Up Rolled-Back Helper Stack
+        run: |
+          aws cloudformation delete-stack --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
+          aws cloudformation wait stack-delete-complete --stack-name aws-sam-cli-managed-default --region ap-south-1 || true
+
       - name: Ensure Deployment S3 Bucket Exists
         run: |
           aws s3api create-bucket \
