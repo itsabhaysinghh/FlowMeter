@@ -9,7 +9,6 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
-        AWS_REGION: ap-south-1
         FLOW_DEVICE_TABLE: !Ref FlostatFlowDeviceTable
         FLOW_METER_TABLE: !Ref FlostatFlowMeterTable
         FLOW_READINGS_TABLE: !Ref FlostatFlowMeterTable
