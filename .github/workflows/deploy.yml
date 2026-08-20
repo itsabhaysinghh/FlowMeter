@@ -45,8 +45,8 @@ jobs:
         run: |
           STACK_STATUS=$(aws cloudformation describe-stacks --stack-name flostat-flow-serverless-stack --region ap-south-1 --query "Stacks[0].StackStatus" --output text 2>/dev/null || echo "NOT_FOUND")
           echo "Current stack status: $STACK_STATUS"
-          if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ]; then
-            echo "Stack is in ROLLBACK_COMPLETE state from initial failed creation. Deleting..."
+          if [[ "$STACK_STATUS" == *"ROLLBACK"* ]] || [[ "$STACK_STATUS" == *"FAILED"* ]]; then
+            echo "Stack is in $STACK_STATUS state from initial failed creation. Deleting..."
             aws cloudformation delete-stack --stack-name flostat-flow-serverless-stack --region ap-south-1
             aws cloudformation wait stack-delete-complete --stack-name flostat-flow-serverless-stack --region ap-south-1
             echo "Failed stack deleted successfully."
@@ -58,6 +58,7 @@ jobs:
       - name: SAM Deploy to AWS (Account 502830865576)
         run: |
           sam deploy \
+            --debug \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --stack-name flostat-flow-serverless-stack \

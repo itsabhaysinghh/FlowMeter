@@ -63,8 +63,8 @@ Resources:
   FlostatApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ./
-      Handler: backend/lambda.handler
+      CodeUri: backend/
+      Handler: lambda.handler
       Description: Flostat Serverless Lambda Handler
       Policies:
         - DynamoDBCrudPolicy:
