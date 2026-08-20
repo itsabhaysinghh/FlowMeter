@@ -738,13 +738,11 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     window.setTimeout(() => setDeletionNotification(null), 5000);
   };
 
-
-
   return (
     <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
       
       {/* Top Global SaaS Status & Health Ticker */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-3 px-5 bg-white border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-505 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] font-sans">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-3 px-5 bg-white border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-500 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] font-sans">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
@@ -753,12 +751,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
             </span>
             <span className="text-slate-500">System Health:</span>
             <span className="text-emerald-600 font-bold">98.2% Optimal</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span className="text-slate-500">API Status:</span>
-            <span className="text-blue-600 font-bold">Connected (AWS Live Gateway)</span>
           </div>
 
           <div className="flex items-center gap-1.5">
