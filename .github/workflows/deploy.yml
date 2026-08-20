@@ -62,7 +62,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --stack-name flostat-flow-serverless-stack \
             --region ap-south-1 \
-            --capabilities CAPABILITY_IAM \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
             --s3-bucket flostat-deploy-502830865576-mumbai \
             --s3-prefix flostat-backend
 
@@ -73,5 +73,5 @@ jobs:
           aws cloudformation describe-stack-events \
             --stack-name flostat-flow-serverless-stack \
             --region ap-south-1 \
-            --query "StackEvents[?ResourceStatus=='CREATE_FAILED'].[LogicalResourceId, ResourceType, ResourceStatusReason]" \
+            --query "StackEvents[?contains(ResourceStatus, 'FAILED')].[LogicalResourceId, ResourceType, ResourceStatus, ResourceStatusReason]" \
             --output table || true

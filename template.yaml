@@ -12,12 +12,13 @@ Globals:
         AWS_REGION: ap-south-1
         FLOW_DEVICE_TABLE: !Ref FlostatFlowDeviceTable
         FLOW_METER_TABLE: !Ref FlostatFlowMeterTable
+        FLOW_READINGS_TABLE: !Ref FlostatFlowMeterTable
+        FLOW_ROLLUPS_TABLE: !Ref FlostatFlowDeviceTable
 
 Resources:
   FlostatFlowDeviceTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: Flostat_Flow_Device_Table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: org_id
@@ -37,7 +38,6 @@ Resources:
   FlostatFlowMeterTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: Flostat_Flow_Meter_Table
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: flow_meter_id
