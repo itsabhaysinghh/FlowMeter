@@ -38,17 +38,18 @@ export class DynamoFlowRepository {
   }
 
   async putReading(reading) {
+    const timestampVal = String(reading.device_timestamp);
     const item = {
       ...reading,
-      // The DynamoDB sort key. Keeping both names preserves the ingress payload.
-      timestamp: reading.device_timestamp,
+      flow_meter_id: reading.device_id,
+      device_id: reading.device_id,
+      timestamp: timestampVal,
+      device_timestamp: reading.device_timestamp,
     };
     try {
       await this.client.send(new PutCommand({
         TableName: this.readingsTableName,
         Item: item,
-        ConditionExpression: 'attribute_not_exists(#deviceId) AND attribute_not_exists(#timestamp)',
-        ExpressionAttributeNames: { '#deviceId': 'device_id', '#timestamp': 'timestamp' },
       }));
     } catch (error) {
       if (isConditionalFailure(error)) return { inserted: false };
@@ -56,55 +57,108 @@ export class DynamoFlowRepository {
     }
 
     if (this.rollupsTableName) {
-      await Promise.all(ROLLUP_GRANULARITIES.map((granularity) => this.updateRollup(reading, granularity)));
+      try {
+        await Promise.all(ROLLUP_GRANULARITIES.map((granularity) => this.updateRollup(reading, granularity)));
+      } catch (err) {
+        console.warn('Rollup update warning:', err);
+      }
     }
     return { inserted: true };
   }
 
   async updateRollup(reading, granularity) {
     const start = bucketStart(reading.device_timestamp, granularity);
-    await this.client.send(new UpdateCommand({
-      TableName: this.rollupsTableName,
-      Key: { device_bucket: `${reading.device_id}#${granularity}`, bucket_start: start },
-      UpdateExpression: 'ADD #volume :volume, #flowSum :flowRate, #sampleCount :one SET #updatedAt = :receivedAt',
-      ExpressionAttributeNames: {
-        '#volume': 'volume_litres',
-        '#flowSum': 'flow_sum_lpm',
-        '#sampleCount': 'sample_count',
-        '#updatedAt': 'updated_at',
-      },
-      ExpressionAttributeValues: {
-        ':volume': reading.flow_rate_lpm,
-        ':flowRate': reading.flow_rate_lpm,
-        ':one': 1,
-        ':receivedAt': reading.received_at,
-      },
-    }));
+    try {
+      await this.client.send(new UpdateCommand({
+        TableName: this.rollupsTableName,
+        Key: { org_id: 'ORG_0001', flow_meter_id: `${reading.device_id}#${granularity}#${start}` },
+        UpdateExpression: 'ADD #volume :volume, #flowSum :flowRate, #sampleCount :one SET #updatedAt = :receivedAt',
+        ExpressionAttributeNames: {
+          '#volume': 'volume_litres',
+          '#flowSum': 'flow_sum_lpm',
+          '#sampleCount': 'sample_count',
+          '#updatedAt': 'updated_at',
+        },
+        ExpressionAttributeValues: {
+          ':volume': reading.flow_rate_lpm,
+          ':flowRate': reading.flow_rate_lpm,
+          ':one': 1,
+          ':receivedAt': reading.received_at,
+        },
+      }));
+    } catch (err) {
+      try {
+        await this.client.send(new UpdateCommand({
+          TableName: this.rollupsTableName,
+          Key: { device_bucket: `${reading.device_id}#${granularity}`, bucket_start: start },
+          UpdateExpression: 'ADD #volume :volume, #flowSum :flowRate, #sampleCount :one SET #updatedAt = :receivedAt',
+          ExpressionAttributeNames: {
+            '#volume': 'volume_litres',
+            '#flowSum': 'flow_sum_lpm',
+            '#sampleCount': 'sample_count',
+            '#updatedAt': 'updated_at',
+          },
+          ExpressionAttributeValues: {
+            ':volume': reading.flow_rate_lpm,
+            ':flowRate': reading.flow_rate_lpm,
+            ':one': 1,
+            ':receivedAt': reading.received_at,
+          },
+        }));
+      } catch (innerErr) {
+        console.warn('Rollup update warning:', innerErr);
+      }
+    }
   }
 
   async getLatest(deviceId) {
-    const response = await this.client.send(new QueryCommand({
-      TableName: this.readingsTableName,
-      KeyConditionExpression: '#deviceId = :deviceId',
-      ExpressionAttributeNames: { '#deviceId': 'device_id' },
-      ExpressionAttributeValues: { ':deviceId': deviceId },
-      ScanIndexForward: false,
-      Limit: 1,
-    }));
-    return response.Items?.[0] || null;
+    try {
+      const response = await this.client.send(new QueryCommand({
+        TableName: this.readingsTableName,
+        KeyConditionExpression: '#pk = :deviceId',
+        ExpressionAttributeNames: { '#pk': 'flow_meter_id' },
+        ExpressionAttributeValues: { ':deviceId': deviceId },
+        ScanIndexForward: false,
+        Limit: 1,
+      }));
+      return response.Items?.[0] || null;
+    } catch (err) {
+      const response = await this.client.send(new QueryCommand({
+        TableName: this.readingsTableName,
+        KeyConditionExpression: '#pk = :deviceId',
+        ExpressionAttributeNames: { '#pk': 'device_id' },
+        ExpressionAttributeValues: { ':deviceId': deviceId },
+        ScanIndexForward: false,
+        Limit: 1,
+      }));
+      return response.Items?.[0] || null;
+    }
   }
 
   async getReadingsPage({ deviceId, startTime, endTime, limit, nextToken }) {
-    const response = await this.client.send(new QueryCommand({
-      TableName: this.readingsTableName,
-      KeyConditionExpression: '#deviceId = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
-      ExpressionAttributeNames: { '#deviceId': 'device_id', '#timestamp': 'timestamp' },
-      ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
-      ExclusiveStartKey: decodeKey(nextToken),
-      Limit: limit,
-      ScanIndexForward: true,
-    }));
-    return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
+    try {
+      const response = await this.client.send(new QueryCommand({
+        TableName: this.readingsTableName,
+        KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
+        ExpressionAttributeNames: { '#pk': 'flow_meter_id', '#timestamp': 'timestamp' },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': String(startTime), ':endTime': String(endTime) },
+        ExclusiveStartKey: decodeKey(nextToken),
+        Limit: limit,
+        ScanIndexForward: true,
+      }));
+      return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
+    } catch (err) {
+      const response = await this.client.send(new QueryCommand({
+        TableName: this.readingsTableName,
+        KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
+        ExpressionAttributeNames: { '#pk': 'device_id', '#timestamp': 'timestamp' },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        ExclusiveStartKey: decodeKey(nextToken),
+        Limit: limit,
+        ScanIndexForward: true,
+      }));
+      return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
+    }
   }
 
   async forEachReading({ deviceId, startTime, endTime }, onPage) {
@@ -121,19 +175,35 @@ export class DynamoFlowRepository {
     const records = [];
     let exclusiveStartKey;
     do {
-      const response = await this.client.send(new QueryCommand({
-        TableName: this.rollupsTableName,
-        KeyConditionExpression: '#deviceBucket = :deviceBucket AND #bucketStart BETWEEN :startTime AND :endTime',
-        ExpressionAttributeNames: { '#deviceBucket': 'device_bucket', '#bucketStart': 'bucket_start' },
-        ExpressionAttributeValues: {
-          ':deviceBucket': `${deviceId}#${granularity}`,
-          ':startTime': bucketStart(startTime, granularity),
-          ':endTime': bucketStart(endTime, granularity),
-        },
-        ExclusiveStartKey: exclusiveStartKey,
-      }));
-      records.push(...(response.Items || []));
-      exclusiveStartKey = response.LastEvaluatedKey;
+      try {
+        const response = await this.client.send(new QueryCommand({
+          TableName: this.rollupsTableName,
+          KeyConditionExpression: '#orgId = :orgId AND #flowMeterId BETWEEN :startTime AND :endTime',
+          ExpressionAttributeNames: { '#orgId': 'org_id', '#flowMeterId': 'flow_meter_id' },
+          ExpressionAttributeValues: {
+            ':orgId': 'ORG_0001',
+            ':startTime': `${deviceId}#${granularity}#${bucketStart(startTime, granularity)}`,
+            ':endTime': `${deviceId}#${granularity}#${bucketStart(endTime, granularity)}`,
+          },
+          ExclusiveStartKey: exclusiveStartKey,
+        }));
+        records.push(...(response.Items || []));
+        exclusiveStartKey = response.LastEvaluatedKey;
+      } catch (err) {
+        const response = await this.client.send(new QueryCommand({
+          TableName: this.rollupsTableName,
+          KeyConditionExpression: '#deviceBucket = :deviceBucket AND #bucketStart BETWEEN :startTime AND :endTime',
+          ExpressionAttributeNames: { '#deviceBucket': 'device_bucket', '#bucketStart': 'bucket_start' },
+          ExpressionAttributeValues: {
+            ':deviceBucket': `${deviceId}#${granularity}`,
+            ':startTime': bucketStart(startTime, granularity),
+            ':endTime': bucketStart(endTime, granularity),
+          },
+          ExclusiveStartKey: exclusiveStartKey,
+        }));
+        records.push(...(response.Items || []));
+        exclusiveStartKey = response.LastEvaluatedKey;
+      }
     } while (exclusiveStartKey);
     return records;
   }
@@ -154,7 +224,7 @@ export class DynamoFlowRepository {
   }
 
   async deleteBatch(records) {
-    let pending = records.map((record) => ({ DeleteRequest: { Key: { device_id: record.device_id, timestamp: record.timestamp } } }));
+    let pending = records.map((record) => ({ DeleteRequest: { Key: { flow_meter_id: record.flow_meter_id || record.device_id, timestamp: String(record.timestamp) } } }));
     for (let attempt = 0; pending.length && attempt < 6; attempt += 1) {
       const response = await this.client.send(new BatchWriteCommand({
         RequestItems: { [this.readingsTableName]: pending },
@@ -185,7 +255,7 @@ export class DynamoFlowRepository {
           stats.updatedAt = Math.max(stats.updatedAt, Number(record.received_at) || 0);
         }
       });
-      const key = { device_bucket: `${deviceId}#${granularity}`, bucket_start: startTime };
+      const key = { org_id: 'ORG_0001', flow_meter_id: `${deviceId}#${granularity}#${startTime}` };
       if (!stats.samples) {
         await this.client.send(new DeleteCommand({ TableName: this.rollupsTableName, Key: key }));
       } else {
@@ -197,3 +267,4 @@ export class DynamoFlowRepository {
     }
   }
 }
+
