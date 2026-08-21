@@ -15,7 +15,7 @@ import { formatLastSeen } from '../utils/formatters';
 import { getIstPeriodRange } from '../utils/ist';
 
 // Retrieve base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://zohk43tmnj.execute-api.ap-south-1.amazonaws.com/dev-flow';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://wbeuxrg5l0.execute-api.ap-south-1.amazonaws.com';
 // An override supports a separately deployed delete route; the local backend uses this API base path.
 const DELETE_FLOW_DATA_API_URL = import.meta.env.VITE_DELETE_FLOW_DATA_API_URL || `${API_BASE_URL}/v1/flow/data`;
 
