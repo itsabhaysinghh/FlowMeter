@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
 import { meterService } from '../services/meter.service';
 import { formatLastSeen } from '../utils/formatters';
@@ -22,11 +22,10 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
   const [data, setData] = useState<WaterMeterDataResponse | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
   const [apiError, setApiError] = useState<string | null>(null);
-  const isFetchingRef = useRef<boolean>(false);
 
   const [refreshInterval, setRefreshIntervalState] = useState<number>(() => {
     const saved = sessionStorage.getItem('flostat_refresh_interval');
-    return saved ? parseInt(saved, 10) : 1000;
+    return saved ? parseInt(saved, 10) : 60000;
   });
 
   const setRefreshInterval = useCallback((intervalMs: number) => {
@@ -35,8 +34,6 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
     // This token intentionally invalidates the callback after a confirmed delete.
     void dataRefreshToken;
     setApiError(null);
@@ -45,20 +42,17 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
       setState('connected');
       setData(connectedStreamData);
       setLastRefreshed(new Date().toLocaleTimeString());
-      isFetchingRef.current = false;
       return;
     }
     if (devStateOverride === 'empty') {
       setState('empty');
       setData(null);
-      isFetchingRef.current = false;
       return;
     }
 
     if (!selectedDevice) {
       setState('empty');
       setData(null);
-      isFetchingRef.current = false;
       return;
     }
 
@@ -117,8 +111,6 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
       setApiError(`Axios Request Failed: ${statusText}`);
       setState('empty');
       setData(null);
-    } finally {
-      isFetchingRef.current = false;
     }
   }, [activeTab, customDateRange, specificDate, selectedMonth, selectedYear, dataRefreshToken, devStateOverride, connectedStreamData, selectedDevice]);
 

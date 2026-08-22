@@ -178,7 +178,6 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
               className="appearance-none pr-8 pl-3 py-1.5 rounded-xl border border-flostat-border dark:border-slate-800 bg-white dark:bg-dark-card hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 text-[11px] font-bold transition-all shadow-sm focus:outline-none cursor-pointer"
               title="Auto Refresh Settings"
             >
-              <option value={1000} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200">1s Real-Time</option>
               <option value={5000} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200">5s Refresh</option>
               <option value={10000} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200">10s Refresh</option>
               <option value={30000} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200">30s Refresh</option>
@@ -700,13 +699,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
       if (active) setDeviceSnapshots(Object.fromEntries(snapshots));
     }
     void loadDeviceSnapshots();
-    const timer = setInterval(() => {
-      void loadDeviceSnapshots();
-    }, 1000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+    return () => { active = false; };
   }, [activeTab, customDateRange, dataRefreshToken, devices, specificDate, selectedMonth, selectedYear]);
 
   const getDeviceConsumption = React.useCallback((deviceId: string) => {
