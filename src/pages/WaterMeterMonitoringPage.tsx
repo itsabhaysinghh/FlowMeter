@@ -16,6 +16,8 @@ import {
   Zap,
   CreditCard,
   Trash2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -26,6 +28,7 @@ import {
 } from 'recharts';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult } from '../types/meter.types';
 import { useWaterMeterData } from '../hooks/useWaterMeterData';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { meterService } from '../services/meter.service';
 import { MetricCard } from '../components/common/MetricCard';
 import { ChartCard } from '../components/common/ChartCard';
@@ -495,6 +498,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   selectedDevice,
   onDeviceChange,
 }) => {
+  const { isDark, toggleDarkMode } = useDarkMode();
   const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'billing'>('overview');
   const [activeTab, setActiveTab] = useState<TimeRangeTab>(() => (localStorage.getItem('flostat_active_tab') as TimeRangeTab) || 'today');
   const [specificDate, setSpecificDate] = useState<string>(() => localStorage.getItem('flostat_specific_date') || new Date().toISOString().split('T')[0]);
@@ -1075,6 +1079,32 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               </button>
             </div>
           )}
+          <span className="h-3 w-px bg-slate-200 dark:bg-slate-700" />
+          
+          {/* Dark Mode Slide Button Toggle */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 shadow-xs">
+            <Sun className={`w-3.5 h-3.5 transition-colors ${!isDark ? 'text-amber-500 font-bold' : 'text-slate-400'}`} />
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer items-center rounded-full p-0.5 border transition-colors duration-300 focus:outline-none ${
+                isDark
+                  ? 'bg-indigo-950 border-indigo-700/80'
+                  : 'bg-slate-200 border-slate-300'
+              }`}
+              aria-label="Toggle Dark Mode"
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              <span
+                className={`pointer-events-none flex h-4 w-4 transform items-center justify-center rounded-full bg-white dark:bg-slate-900 shadow-md transition duration-300 ease-in-out ${
+                  isDark ? 'translate-x-5 text-indigo-400' : 'translate-x-0 text-amber-500'
+                }`}
+              >
+                {isDark ? <Moon className="w-2.5 h-2.5 text-indigo-300" /> : <Sun className="w-2.5 h-2.5 text-amber-500" />}
+              </span>
+            </button>
+            <Moon className={`w-3.5 h-3.5 transition-colors ${isDark ? 'text-indigo-400 font-bold' : 'text-slate-400'}`} />
+          </div>
         </div>
       </div>
 
@@ -1179,27 +1209,57 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                   </p>
                 </div>
 
-                {/* Period Select Button Tabs */}
-                <TimeFrameSelector
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  specificDate={specificDate}
-                  setSpecificDate={setSpecificDate}
-                  selectedMonth={selectedMonth}
-                  setSelectedMonth={setSelectedMonth}
-                  selectedYear={selectedYear}
-                  setSelectedYear={setSelectedYear}
-                  customDateRange={customDateRange}
-                  startDate={startDate}
-                  setStartDate={setStartDate}
-                  endDate={endDate}
-                  setEndDate={setEndDate}
-                  isDatePickerOpen={isDatePickerOpen}
-                  setIsDatePickerOpen={setIsDatePickerOpen}
-                  handlePreset={handlePreset}
-                  handleApplyRange={handleApplyRange}
-                  popoverRef={popoverRef}
-                />
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Period Select Button Tabs */}
+                  <TimeFrameSelector
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    specificDate={specificDate}
+                    setSpecificDate={setSpecificDate}
+                    selectedMonth={selectedMonth}
+                    setSelectedMonth={setSelectedMonth}
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                    customDateRange={customDateRange}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    isDatePickerOpen={isDatePickerOpen}
+                    setIsDatePickerOpen={setIsDatePickerOpen}
+                    handlePreset={handlePreset}
+                    handleApplyRange={handleApplyRange}
+                    popoverRef={popoverRef}
+                  />
+
+                  {/* Dark Mode Slide Button Switch */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all">
+                    <Sun className={`w-3.5 h-3.5 transition-colors ${!isDark ? 'text-amber-500 font-bold' : 'text-slate-400'}`} />
+                    <button
+                      type="button"
+                      onClick={toggleDarkMode}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 border transition-colors duration-300 focus:outline-none ${
+                        isDark
+                          ? 'bg-indigo-950 border-indigo-700/80 shadow-inner'
+                          : 'bg-slate-200 border-slate-300 shadow-inner'
+                      }`}
+                      aria-label="Toggle Dark Mode"
+                      title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    >
+                      <span
+                        className={`pointer-events-none flex h-5 w-5 transform items-center justify-center rounded-full shadow-md transition duration-300 ease-in-out ${
+                          isDark ? 'translate-x-5 bg-indigo-600 text-indigo-100' : 'translate-x-0 bg-white text-amber-500'
+                        }`}
+                      >
+                        {isDark ? <Moon className="w-3 h-3 text-indigo-100" /> : <Sun className="w-3 h-3 text-amber-500" />}
+                      </span>
+                    </button>
+                    <Moon className={`w-3.5 h-3.5 transition-colors ${isDark ? 'text-indigo-400 font-bold' : 'text-slate-400'}`} />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-0.5">
+                      {isDark ? 'Dark' : 'Light'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
 
