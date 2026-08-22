@@ -74,6 +74,13 @@ export function createIstDeletionRequest(
   deviceId: string,
   input: DeleteRangeInput,
 ): DeleteFlowMeterDataRequest | null {
+  if (input.mode === 'all') {
+    if (!deviceId) return null;
+    const endSec = Math.floor(Date.now() / 1000);
+    const startSec = endSec - Math.floor(4.9 * 365.25 * 24 * 60 * 60);
+    return { device_id: deviceId, start_time: startSec, end_time: endSec };
+  }
+
   const isTimeRange = input.mode === 'time-range';
   const startDate = input.mode === 'date-range' ? input.startDate : input.date;
   const endDate = input.mode === 'date-range' ? input.endDate : input.date;
@@ -122,19 +129,13 @@ function addIstDays(dateInput: string, days: number): string {
   return `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
 }
 
-function addIstYears(dateInput: string, years: number): string {
-  const date = parseDateInput(dateInput);
-  if (!date) throw new Error('Invalid IST date.');
-  const [year, month, day] = date;
-  const nextDate = new Date(Date.UTC(year + years, month - 1, day));
-  return `${nextDate.getUTCFullYear()}-${String(nextDate.getUTCMonth() + 1).padStart(2, '0')}-${String(nextDate.getUTCDate()).padStart(2, '0')}`;
-}
-
 /** Produces the API's inclusive Unix-second range for a dashboard period in IST. */
 export function getIstPeriodRange(
   period: TimeRangeTab,
   customDateRange?: DateRange,
   specificDate?: string,
+  selectedMonth?: string,
+  selectedYear?: string,
   now = new Date(),
 ): { start: number; end: number; interval: 'hour' | 'day' | 'month' } {
   const today = getIstDateInputValue(now);
@@ -147,10 +148,20 @@ export function getIstPeriodRange(
     startDate = addIstDays(today, -6);
     interval = 'day';
   } else if (period === 'month') {
-    startDate = addIstDays(today, -29);
+    const targetMonth = selectedMonth || today.slice(0, 7);
+    const parts = targetMonth.split('-');
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    startDate = `${targetMonth}-01`;
+    endDate = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+    end = istDateTimeToEpochSeconds(endDate, '23:59', 59) ?? end;
     interval = 'day';
   } else if (period === 'year') {
-    startDate = addIstYears(today, -1);
+    const targetYear = selectedYear || today.slice(0, 4);
+    startDate = `${targetYear}-01-01`;
+    endDate = `${targetYear}-12-31`;
+    end = istDateTimeToEpochSeconds(endDate, '23:59', 59) ?? end;
     interval = 'month';
   } else if (period === 'specific' && specificDate) {
     startDate = specificDate;

@@ -7,6 +7,8 @@ export interface UseWaterMeterDataOptions {
   activeTab?: TimeRangeTab;
   customDateRange?: DateRange;
   specificDate?: string;
+  selectedMonth?: string;
+  selectedYear?: string;
   selectedDevice?: DeviceOption | null;
   /** Increment after a confirmed server-side mutation to refresh telemetry views. */
   dataRefreshToken?: number;
@@ -15,7 +17,7 @@ export interface UseWaterMeterDataOptions {
 }
 
 export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
-  const { activeTab = 'today', customDateRange, specificDate, selectedDevice, dataRefreshToken, devStateOverride, connectedStreamData } = options;
+  const { activeTab = 'today', customDateRange, specificDate, selectedMonth, selectedYear, selectedDevice, dataRefreshToken, devStateOverride, connectedStreamData } = options;
   const [state, setState] = useState<ModuleState>(devStateOverride || 'empty');
   const [data, setData] = useState<WaterMeterDataResponse | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
@@ -61,9 +63,9 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
       await Promise.all([
           meterService.getMeterMetadata(meterId),
           meterService.getLiveFlowRate(meterId),
-          meterService.getConsumption(activeTab, meterId, customDateRange, specificDate),
-          meterService.getFlowTrend(meterId, activeTab, customDateRange, specificDate),
-          meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate),
+          meterService.getConsumption(activeTab, meterId, customDateRange, specificDate, selectedMonth, selectedYear),
+          meterService.getFlowTrend(meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
+          meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
       ]);
 
       if (!metrics) {
@@ -110,7 +112,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
       setState('empty');
       setData(null);
     }
-  }, [activeTab, customDateRange, specificDate, dataRefreshToken, devStateOverride, connectedStreamData, selectedDevice]);
+  }, [activeTab, customDateRange, specificDate, selectedMonth, selectedYear, dataRefreshToken, devStateOverride, connectedStreamData, selectedDevice]);
 
   useEffect(() => {
     fetchData();

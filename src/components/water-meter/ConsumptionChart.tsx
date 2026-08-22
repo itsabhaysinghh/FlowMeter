@@ -170,14 +170,14 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
   const chartData = React.useMemo(() => {
     const inputData = data || [];
     
-    if (activeTab === 'year' || activeTab === 'custom') {
+    if (activeTab === 'custom') {
       return inputData;
     }
     
     let targetLabels: string[] = [];
     let matchFn: (backendLabel: string, genLabel: string) => boolean;
 
-    if (activeTab === 'today') {
+    if (activeTab === 'today' || activeTab === 'specific') {
       targetLabels = [
         '12 AM', '01 AM', '02 AM', '03 AM', '04 AM', '05 AM', '06 AM', '07 AM', '08 AM', '09 AM', '10 AM', '11 AM',
         '12 PM', '01 PM', '02 PM', '03 PM', '04 PM', '05 PM', '06 PM', '07 PM', '08 PM', '09 PM', '10 PM', '11 PM'
@@ -194,6 +194,11 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
       targetLabels = generateMonthLabels();
       matchFn = (backendLabel, genLabel) => {
         return normalizeDateLabel(backendLabel) === normalizeDateLabel(genLabel);
+      };
+    } else if (activeTab === 'year') {
+      targetLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      matchFn = (backendLabel, genLabel) => {
+        return backendLabel.toLowerCase().includes(genLabel.toLowerCase());
       };
     } else {
       return inputData;

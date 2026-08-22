@@ -83,12 +83,32 @@ const CustomPieTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+const formatMonthLabel = (monthStr?: string) => {
+  if (!monthStr) return '';
+  const [year, month] = monthStr.split('-');
+  const d = new Date(Number(year), Number(month) - 1, 1);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
+
+const formatDateString = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+};
+
 // Inline details dashboard inside expandable table rows
 interface DeviceInlineDashboardProps {
   device: DeviceOption;
   activeTab: TimeRangeTab;
   customDateRange: DateRange;
   specificDate?: string;
+  selectedMonth?: string;
+  selectedYear?: string;
   dataRefreshToken?: number;
   devStateOverride?: ModuleState;
   connectedStreamData?: WaterMeterDataResponse | null;
@@ -99,6 +119,8 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
   activeTab,
   customDateRange,
   specificDate,
+  selectedMonth,
+  selectedYear,
   dataRefreshToken,
   devStateOverride,
   connectedStreamData,
@@ -107,6 +129,8 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
     activeTab,
     customDateRange,
     specificDate,
+    selectedMonth,
+    selectedYear,
     selectedDevice: device,
     dataRefreshToken,
     devStateOverride,
@@ -190,7 +214,19 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
         />
 
         <MetricCard
-          title={`${activeTab === 'today' ? "Single Day's" : activeTab === 'week' ? "One Week's" : activeTab === 'specific' ? `Specific Date (${specificDate})` : activeTab === 'month' ? "This Month's" : activeTab === 'year' ? "This Year's" : "Custom Period"} Total Consumption`}
+          title={`${
+            activeTab === 'today'
+              ? "Single Day's"
+              : activeTab === 'week'
+              ? "Last 7 Days'"
+              : activeTab === 'specific'
+              ? `Specific Date (${formatDateString(specificDate)})`
+              : activeTab === 'month'
+              ? `Month (${formatMonthLabel(selectedMonth)})`
+              : activeTab === 'year'
+              ? `Year (${selectedYear})`
+              : "Custom Period"
+          } Total Consumption`}
           value={formatNumber(data.metrics.todaysConsumption, 1)}
           unit="Litres"
           subtitle={`Aggregated volume for ${device.name}`}
@@ -217,6 +253,12 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
           description={
             activeTab === 'custom'
               ? `Custom date range (${customDateRange.startDate} to ${customDateRange.endDate})`
+              : activeTab === 'specific'
+              ? `Specific date (${formatDateString(specificDate)})`
+              : activeTab === 'month'
+              ? `Specific month (${formatMonthLabel(selectedMonth)})`
+              : activeTab === 'year'
+              ? `Specific year (${selectedYear})`
               : 'Interval consumption breakdown across selected timeframe'
           }
           icon={<Droplet className="w-5 h-5" />}
@@ -244,13 +286,207 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
 };
 
 const TABS: { id: TimeRangeTab; label: string }[] = [
-  { id: 'today', label: 'Single Day Data' },
-  { id: 'week', label: 'One Week Data' },
+  { id: 'today', label: 'Today' },
+  { id: 'week', label: 'Week' },
   { id: 'specific', label: 'Specific Date' },
   { id: 'month', label: 'Month' },
   { id: 'year', label: 'Year' },
   { id: 'custom', label: 'Custom' },
 ];
+
+interface TimeFrameSelectorProps {
+  activeTab: TimeRangeTab;
+  setActiveTab: (tab: TimeRangeTab) => void;
+  specificDate: string;
+  setSpecificDate: (date: string) => void;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
+  selectedYear: string;
+  setSelectedYear: (year: string) => void;
+  customDateRange: DateRange;
+  startDate: string;
+  setStartDate: (date: string) => void;
+  endDate: string;
+  setEndDate: (date: string) => void;
+  isDatePickerOpen: boolean;
+  setIsDatePickerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  handlePreset: (days: number) => void;
+  handleApplyRange: () => void;
+  popoverRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
+  activeTab,
+  setActiveTab,
+  specificDate,
+  setSpecificDate,
+  selectedMonth,
+  setSelectedMonth,
+  selectedYear,
+  setSelectedYear,
+  customDateRange,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate,
+  isDatePickerOpen,
+  setIsDatePickerOpen,
+  handlePreset,
+  handleApplyRange,
+  popoverRef,
+}) => {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
+
+  const formatDateLabel = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const handleTabClick = (tabId: TimeRangeTab) => {
+    setActiveTab(tabId);
+    if (tabId === 'custom') {
+      setIsDatePickerOpen(true);
+    } else {
+      setIsDatePickerOpen(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Tab Segment Controls */}
+      <div className="flex items-center p-1 bg-slate-100/85 dark:bg-slate-800/85 rounded-lg border border-slate-200 dark:border-slate-700">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => handleTabClick(tab.id)}
+            className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
+              activeTab === tab.id
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Specific Date Picker */}
+      {activeTab === 'specific' && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Date:</span>
+          <input
+            type="date"
+            value={specificDate}
+            onChange={(e) => setSpecificDate(e.target.value)}
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
+          />
+        </div>
+      )}
+
+      {/* Month Picker */}
+      {activeTab === 'month' && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Month:</span>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
+          />
+        </div>
+      )}
+
+      {/* Year Picker */}
+      {activeTab === 'year' && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-805 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Year:</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none"
+          >
+            {years.map((y) => (
+              <option key={y} value={y.toString()} className="dark:bg-slate-900 text-slate-800 dark:text-white">
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Custom Date Range Picker */}
+      {activeTab === 'custom' && (
+        <div className="relative inline-block text-left shadow-sm" ref={popoverRef}>
+          <button
+            onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-flostat-primary dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm cursor-pointer"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>
+              {formatDateLabel(customDateRange.startDate)} - {formatDateLabel(customDateRange.endDate)}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isDatePickerOpen && (
+            <div className="absolute left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-0 top-full mt-2 w-80 p-4 bg-white dark:bg-dark-card border border-flostat-border dark:border-slate-800 rounded-2xl shadow-2xl z-50 space-y-4">
+              <div className="space-y-3">
+                <h4 className="font-bold text-xs text-slate-800 dark:text-white">Custom Date Range</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => handlePreset(7)}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    7 Days
+                  </button>
+                  <button
+                    onClick={() => handlePreset(14)}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
+                  >
+                    14 Days
+                  </button>
+                </div>
+                <button
+                  onClick={handleApplyRange}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> = ({
   devStateOverride,
@@ -262,6 +498,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'billing'>('overview');
   const [activeTab, setActiveTab] = useState<TimeRangeTab>('today');
   const [specificDate, setSpecificDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().split('T')[0].slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState<string>(() => new Date().getFullYear().toString());
   const [customDateRange, setCustomDateRange] = useState<DateRange>({
     startDate: '2026-07-01',
     endDate: '2026-07-20',
@@ -379,14 +617,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     setIsDatePickerOpen(false);
   };
 
-  const handleTabClick = (tabId: TimeRangeTab) => {
-    setActiveTab(tabId);
-    if (tabId === 'custom') {
-      setIsDatePickerOpen(true);
-    } else {
-      setIsDatePickerOpen(false);
-    }
-  };
 
   const formatDateLabel = (dateStr: string) => {
     if (!dateStr) return '';
@@ -399,6 +629,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     activeTab,
     customDateRange,
     specificDate,
+    selectedMonth,
+    selectedYear,
     selectedDevice: devices.find((d) => d.id === 'FLOSTAT_001') || selectedDevice,
     dataRefreshToken,
     devStateOverride,
@@ -412,7 +644,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     async function loadDeviceSnapshots() {
       const snapshots = await Promise.all(devices.map(async (device) => {
         const [summary, live] = await Promise.all([
-          meterService.getConsumption(activeTab, device.id, customDateRange, specificDate),
+          meterService.getConsumption(activeTab, device.id, customDateRange, specificDate, selectedMonth, selectedYear),
           meterService.getLiveFlowRate(device.id),
         ]);
         return [device.id, {
@@ -424,7 +656,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     }
     void loadDeviceSnapshots();
     return () => { active = false; };
-  }, [activeTab, customDateRange, dataRefreshToken, devices, specificDate]);
+  }, [activeTab, customDateRange, dataRefreshToken, devices, specificDate, selectedMonth, selectedYear]);
 
   const getDeviceConsumption = React.useCallback((deviceId: string) => {
     return deviceSnapshots[deviceId]?.consumption ?? 0;
@@ -902,103 +1134,28 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     Real-time facility diagnostics, water consumption distributions, and device rankings
                   </p>
                 </div>
- 
+
                 {/* Period Select Button Tabs */}
-                <div className="flex flex-wrap items-center gap-3 shrink-0">
-                  <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200">
-                    {TABS.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
-                          activeTab === tab.id
-                            ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {activeTab === 'specific' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      <span className="text-slate-500 font-medium">Select Date:</span>
-                      <input
-                        type="date"
-                        value={specificDate}
-                        onChange={(e) => setSpecificDate(e.target.value)}
-                        className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
-                      />
-                    </div>
-                  )}
-
-                  {activeTab === 'custom' && (
-                    <div className="relative inline-block text-left" ref={popoverRef}>
-                      <button
-                        onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-850 bg-blue-50/80 dark:bg-blue-950/40 text-flostat-primary dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 transition-all shadow-sm cursor-pointer"
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>
-                          {formatDateLabel(customDateRange.startDate)} - {formatDateLabel(customDateRange.endDate)}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {isDatePickerOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-80 p-4 bg-white dark:bg-dark-card border border-flostat-border dark:border-slate-800 rounded-2xl shadow-2xl z-50 space-y-4">
-                          <div className="space-y-3">
-                            <h4 className="font-bold text-xs text-slate-800 dark:text-white">Custom Date Range</h4>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Start Date</label>
-                                <input
-                                  type="date"
-                                  value={startDate}
-                                  onChange={(e) => setStartDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-white focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">End Date</label>
-                                <input
-                                  type="date"
-                                  value={endDate}
-                                  onChange={(e) => setEndDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-850 dark:text-white focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-                            <div className="flex gap-1.5">
-                              <button
-                                onClick={() => handlePreset(7)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                7 Days
-                              </button>
-                              <button
-                                onClick={() => handlePreset(14)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                14 Days
-                              </button>
-                            </div>
-                            <button
-                              onClick={handleApplyRange}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                            >
-                              Apply
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <TimeFrameSelector
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  specificDate={specificDate}
+                  setSpecificDate={setSpecificDate}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  selectedYear={selectedYear}
+                  setSelectedYear={setSelectedYear}
+                  customDateRange={customDateRange}
+                  startDate={startDate}
+                  setStartDate={setStartDate}
+                  endDate={endDate}
+                  setEndDate={setEndDate}
+                  isDatePickerOpen={isDatePickerOpen}
+                  setIsDatePickerOpen={setIsDatePickerOpen}
+                  handlePreset={handlePreset}
+                  handleApplyRange={handleApplyRange}
+                  popoverRef={popoverRef}
+                />
               </div>
 
 
@@ -1047,7 +1204,17 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                           {formatNumber(totalConsumption, 0)} L
                         </span>
                         <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase mt-0.5">
-                          {activeTab === 'today' ? 'Single Day' : activeTab === 'week' ? 'One Week' : activeTab === 'specific' ? specificDate : activeTab}
+                          {activeTab === 'today'
+                            ? 'Today'
+                            : activeTab === 'week'
+                            ? 'Last 7 Days'
+                            : activeTab === 'specific'
+                            ? formatDateString(specificDate)
+                            : activeTab === 'month'
+                            ? formatMonthLabel(selectedMonth)
+                            : activeTab === 'year'
+                            ? selectedYear
+                            : `${formatDateString(customDateRange.startDate)} - ${formatDateString(customDateRange.endDate)}`}
                         </span>
                       </div>
                     </div>
@@ -1211,86 +1378,26 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                   </button>
 
                   {/* Date range filter picker */}
-                  <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200">
-                    {TABS.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
-                          activeTab === tab.id
-                            ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {activeTab === 'custom' && (
-                    <div className="relative inline-block text-left" ref={popoverRef}>
-                      <button
-                        onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/50 text-flostat-primary dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 transition-all shadow-sm cursor-pointer"
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>
-                          {formatDateLabel(customDateRange.startDate)} - {formatDateLabel(customDateRange.endDate)}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {isDatePickerOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-80 p-4 bg-white dark:bg-dark-card border border-flostat-border dark:border-dark-border rounded-2xl shadow-2xl z-50 space-y-4">
-                          <div className="space-y-3">
-                            <h4 className="font-bold text-xs text-slate-800 dark:text-white">Custom Date Range</h4>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Start Date</label>
-                                <input
-                                  type="date"
-                                  value={startDate}
-                                  onChange={(e) => setStartDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">End Date</label>
-                                <input
-                                  type="date"
-                                  value={endDate}
-                                  onChange={(e) => setEndDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3">
-                            <div className="flex gap-1.5">
-                              <button
-                                onClick={() => handlePreset(7)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                7 Days
-                              </button>
-                              <button
-                                onClick={() => handlePreset(14)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                14 Days
-                              </button>
-                            </div>
-                            <button
-                              onClick={handleApplyRange}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                            >
-                              Apply
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <TimeFrameSelector
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    specificDate={specificDate}
+                    setSpecificDate={setSpecificDate}
+                    selectedMonth={selectedMonth}
+                    setSelectedMonth={setSelectedMonth}
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                    customDateRange={customDateRange}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    isDatePickerOpen={isDatePickerOpen}
+                    setIsDatePickerOpen={setIsDatePickerOpen}
+                    handlePreset={handlePreset}
+                    handleApplyRange={handleApplyRange}
+                    popoverRef={popoverRef}
+                  />
                 </div>
               </div>
 
@@ -1462,6 +1569,8 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                                       activeTab={activeTab}
                                       customDateRange={customDateRange}
                                       specificDate={specificDate}
+                                      selectedMonth={selectedMonth}
+                                      selectedYear={selectedYear}
                                       dataRefreshToken={dataRefreshToken}
                                       devStateOverride={devStateOverride}
                                       connectedStreamData={connectedDataStream}
@@ -1736,86 +1845,26 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                 {/* Export Button & Period Tab Switcher */}
                 <div className="flex flex-wrap items-center gap-3 shrink-0">
                   {/* Period Switcher (shared global state) */}
-                  <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200 shrink-0">
-                    {TABS.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
-                          activeTab === tab.id
-                            ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {activeTab === 'custom' && (
-                    <div className="relative inline-block text-left shadow-sm" ref={popoverRef}>
-                      <button
-                        onClick={() => setIsDatePickerOpen((prev) => !prev)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/80 text-flostat-primary text-xs font-semibold hover:bg-blue-100 transition-all shadow-sm cursor-pointer"
-                      >
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>
-                          {formatDateLabel(customDateRange.startDate)} - {formatDateLabel(customDateRange.endDate)}
-                        </span>
-                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {isDatePickerOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-80 p-4 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 space-y-4">
-                          <div className="space-y-3">
-                            <h4 className="font-bold text-xs text-slate-800">Select Date Range</h4>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Start Date</label>
-                                <input
-                                  type="date"
-                                  value={startDate}
-                                  onChange={(e) => setStartDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-850 focus:outline-none"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">End Date</label>
-                                <input
-                                  type="date"
-                                  value={endDate}
-                                  onChange={(e) => setEndDate(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-850 focus:outline-none"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-                            <div className="flex gap-1.5">
-                              <button
-                                onClick={() => handlePreset(7)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                7 Days
-                              </button>
-                              <button
-                                onClick={() => handlePreset(14)}
-                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                14 Days
-                              </button>
-                            </div>
-                            <button
-                              onClick={handleApplyRange}
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
-                            >
-                              Apply
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <TimeFrameSelector
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    specificDate={specificDate}
+                    setSpecificDate={setSpecificDate}
+                    selectedMonth={selectedMonth}
+                    setSelectedMonth={setSelectedMonth}
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                    customDateRange={customDateRange}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    isDatePickerOpen={isDatePickerOpen}
+                    setIsDatePickerOpen={setIsDatePickerOpen}
+                    handlePreset={handlePreset}
+                    handleApplyRange={handleApplyRange}
+                    popoverRef={popoverRef}
+                  />
 
                   <button
                     onClick={() => {
@@ -1914,7 +1963,17 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     <p className="text-[10px] text-slate-500 mt-0.5">Calculated based on active period water consumption</p>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded text-slate-650 font-bold capitalize">
-                    {activeTab} Period
+                    {activeTab === 'today'
+                      ? 'Today'
+                      : activeTab === 'week'
+                      ? 'Last 7 Days'
+                      : activeTab === 'specific'
+                      ? formatDateString(specificDate)
+                      : activeTab === 'month'
+                      ? formatMonthLabel(selectedMonth)
+                      : activeTab === 'year'
+                      ? selectedYear
+                      : `${formatDateString(customDateRange.startDate)} - ${formatDateString(customDateRange.endDate)}`}
                   </span>
                 </div>
 

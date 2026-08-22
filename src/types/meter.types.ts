@@ -78,7 +78,7 @@ export interface LiveFlowRateApiResponse {
   device_timestamp: string;
 }
 
-export type DeleteDataMode = 'day' | 'date-range' | 'time-range';
+export type DeleteDataMode = 'day' | 'date-range' | 'time-range' | 'all';
 
 export interface DeleteFlowMeterDataRequest {
   device_id: string;

@@ -143,10 +143,12 @@ export class MeterService {
         startDate: string;
         endDate: string;
     },
-    specificDate?: string
+    specificDate?: string,
+    selectedMonth?: string,
+    selectedYear?: string,
   ): Promise<SummaryResponse | null> {
     try {
-      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate);
+      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
 
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/summary`,
@@ -175,10 +177,12 @@ export class MeterService {
     period: TimeRangeTab = 'today',
     customDateRange?: { startDate: string; endDate: string },
     specificDate?: string,
+    selectedMonth?: string,
+    selectedYear?: string,
   ): Promise<FlowTrendDataPoint[] | null> {
 
     try {
-      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate);
+      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
 
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/summary`,
@@ -208,9 +212,11 @@ export class MeterService {
     period: TimeRangeTab = 'today',
     customDateRange?: { startDate: string; endDate: string },
     specificDate?: string,
+    selectedMonth?: string,
+    selectedYear?: string,
   ): Promise<FlowHistoryRecord[] | null> {
     try {
-      const { start, end } = getIstPeriodRange(period, customDateRange, specificDate);
+      const { start, end } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/history`,
         {

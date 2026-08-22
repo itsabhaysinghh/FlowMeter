@@ -27,6 +27,7 @@ const modeLabels: Record<DeleteDataMode, string> = {
   day: 'Specific day',
   'date-range': 'Custom date range',
   'time-range': 'Specific time range',
+  all: 'Delete full records',
 };
 
 export function DeleteDataDialog({
@@ -75,6 +76,9 @@ export function DeleteDataDialog({
   );
 
   const deletionSummary = useMemo(() => {
+    if (mode === 'all') {
+      return 'All historical records (full data)';
+    }
     if (mode === 'date-range') {
       return `${formatIstDateInput(startDate)} – ${formatIstDateInput(endDate)}`;
     }
@@ -197,7 +201,7 @@ export function DeleteDataDialog({
 
             <fieldset className="space-y-2">
               <legend className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Data to delete</legend>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(Object.keys(modeLabels) as DeleteDataMode[]).map((option) => (
                   <label
                     key={option}

@@ -110,7 +110,16 @@ export class FlowService {
 
     if (rollups) {
       for (const rollup of rollups) {
-        const aggregate = newAggregate(rollup.bucket_start);
+        let bucketStartVal = rollup.bucket_start;
+        if (bucketStartVal === undefined && typeof rollup.flow_meter_id === 'string') {
+          const parts = rollup.flow_meter_id.split('#');
+          const lastPart = parts[parts.length - 1];
+          const parsed = Number(lastPart);
+          if (Number.isFinite(parsed)) {
+            bucketStartVal = parsed;
+          }
+        }
+        const aggregate = newAggregate(bucketStartVal);
         aggregate.volume = Number(rollup.volume_litres) || 0;
         aggregate.flowSum = Number(rollup.flow_sum_lpm) || 0;
         aggregate.sampleCount = Number(rollup.sample_count) || 0;

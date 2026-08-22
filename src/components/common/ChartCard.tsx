@@ -18,8 +18,8 @@ interface ChartCardProps {
 }
 
 const TABS: { id: TimeRangeTab; label: string }[] = [
-  { id: 'today', label: 'Single Day Data' },
-  { id: 'week', label: 'One Week Data' },
+  { id: 'today', label: 'Today' },
+  { id: 'week', label: 'Week' },
   { id: 'specific', label: 'Specific Date' },
   { id: 'month', label: 'Month' },
   { id: 'year', label: 'Year' },
