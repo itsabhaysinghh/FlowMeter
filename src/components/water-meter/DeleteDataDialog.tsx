@@ -52,7 +52,12 @@ export function DeleteDataDialog({
     if (!isOpen) return;
 
     const currentDate = getIstDateInputValue();
-    setDeviceId(initialDeviceId && devices.some((device) => device.id === initialDeviceId) ? initialDeviceId : devices[0]?.id || '');
+    const defaultDevice = devices.find((device) => device.id !== 'FLOSTAT_001')?.id || devices[0]?.id || '';
+    const initial = initialDeviceId && initialDeviceId !== 'FLOSTAT_001' && devices.some((device) => device.id === initialDeviceId)
+      ? initialDeviceId
+      : defaultDevice;
+
+    setDeviceId(initial);
     setMode('day');
     setDate(currentDate);
     setStartDate(currentDate);
@@ -90,6 +95,10 @@ export function DeleteDataDialog({
       setError('Select a meter device before continuing.');
       return;
     }
+    if (deviceId === 'FLOSTAT_001') {
+      setError('FLOSTAT_001 is a protected system device. Data for this meter cannot be deleted.');
+      return;
+    }
     if (!request) {
       setError('Enter a valid range where the start is before or equal to the end.');
       return;
@@ -100,6 +109,11 @@ export function DeleteDataDialog({
 
   const handleDelete = async () => {
     if (!request || isDeleting) return;
+
+    if (request.device_id === 'FLOSTAT_001') {
+      setError('FLOSTAT_001 is a protected system device. Data for this meter cannot be deleted.');
+      return;
+    }
 
     setError(null);
     setIsDeleting(true);
@@ -174,6 +188,11 @@ export function DeleteDataDialog({
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               </div>
+              {deviceId === 'FLOSTAT_001' && (
+                <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                  ⚠️ FLOSTAT_001 is a protected system device. Select another device (e.g. FLOSTAT_002) to delete readings.
+                </p>
+              )}
             </div>
 
             <fieldset className="space-y-2">

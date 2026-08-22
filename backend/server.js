@@ -41,28 +41,30 @@ export function createServer({ config = getBackendConfig(), repository } = {}) {
 
   return http.createServer(async (request, response) => {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+    const origin = request.headers.origin || config.frontendOrigin || '*';
     try {
-      if (request.method === 'OPTIONS') return sendJson(response, 204, {}, config.frontendOrigin);
-      if (request.method === 'GET' && url.pathname === '/health') return sendJson(response, 200, { success: true }, config.frontendOrigin);
-      if (request.method === 'GET' && (url.pathname === '/v1/devices' || url.pathname === '/devices')) return sendJson(response, 200, flowService.getDevices(), config.frontendOrigin);
-      if (request.method === 'GET' && (url.pathname === '/v1/flow' || url.pathname === '/flow')) return sendJson(response, 200, await flowService.getReadings(Object.fromEntries(url.searchParams)), config.frontendOrigin);
-      if (request.method === 'GET' && (url.pathname === '/v1/flow/live' || url.pathname === '/flow/live')) return sendJson(response, 200, await flowService.getLive(Object.fromEntries(url.searchParams)), config.frontendOrigin);
-      if (request.method === 'GET' && (url.pathname === '/v1/flow/history' || url.pathname === '/flow/history')) return sendJson(response, 200, await flowService.getHistory(Object.fromEntries(url.searchParams)), config.frontendOrigin);
-      if (request.method === 'GET' && (url.pathname === '/v1/flow/summary' || url.pathname === '/flow/summary')) return sendJson(response, 200, await flowService.getSummary(Object.fromEntries(url.searchParams)), config.frontendOrigin);
+      if (request.method === 'OPTIONS') return sendJson(response, 204, {}, origin);
+      if (request.method === 'GET' && url.pathname === '/health') return sendJson(response, 200, { success: true }, origin);
+      if (request.method === 'GET' && (url.pathname === '/v1/devices' || url.pathname === '/devices')) return sendJson(response, 200, flowService.getDevices(), origin);
+      if (request.method === 'GET' && (url.pathname === '/v1/flow' || url.pathname === '/flow')) return sendJson(response, 200, await flowService.getReadings(Object.fromEntries(url.searchParams)), origin);
+      if (request.method === 'GET' && (url.pathname === '/v1/flow/live' || url.pathname === '/flow/live')) return sendJson(response, 200, await flowService.getLive(Object.fromEntries(url.searchParams)), origin);
+      if (request.method === 'GET' && (url.pathname === '/v1/flow/history' || url.pathname === '/flow/history')) return sendJson(response, 200, await flowService.getHistory(Object.fromEntries(url.searchParams)), origin);
+      if (request.method === 'GET' && (url.pathname === '/v1/flow/summary' || url.pathname === '/flow/summary')) return sendJson(response, 200, await flowService.getSummary(Object.fromEntries(url.searchParams)), origin);
       if (request.method === 'POST' && (url.pathname === '/v1/flow/readings' || url.pathname === '/flow/readings')) {
         authorizeMutation(request, config.apiKey);
-        return sendJson(response, 201, { success: true, ...(await flowService.createReading(await readJson(request))) }, config.frontendOrigin);
+        return sendJson(response, 201, { success: true, ...(await flowService.createReading(await readJson(request))) }, origin);
       }
       if (request.method === 'DELETE' && (url.pathname === '/v1/flow/data' || url.pathname === '/flow/data')) {
-        // Production authorization belongs at the API Gateway/JWT layer. Do not
-        // place an AWS key or simulator API key into the browser application.
-        return sendJson(response, 200, await flowService.deleteReadings(await readJson(request)), config.frontendOrigin);
+        const body = await readJson(request).catch(() => ({}));
+        const query = Object.fromEntries(url.searchParams);
+        const payload = { ...query, ...body };
+        return sendJson(response, 200, await flowService.deleteReadings(payload), origin);
       }
-      return sendJson(response, 404, { success: false, message: 'Route not found.' }, config.frontendOrigin);
+      return sendJson(response, 404, { success: false, message: 'Route not found.' }, origin);
     } catch (error) {
       const statusCode = error instanceof HttpError ? error.statusCode : 500;
       if (statusCode === 500) console.error(error);
-      return sendJson(response, statusCode, { success: false, message: error.message || 'Internal server error.' }, config.frontendOrigin);
+      return sendJson(response, statusCode, { success: false, message: error.message || 'Internal server error.' }, origin);
     }
   });
 }

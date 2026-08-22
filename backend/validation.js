@@ -39,9 +39,9 @@ export function parseEpoch(value, fieldName) {
 }
 
 export function parseRange(source, { defaultStart, defaultEnd } = {}) {
-  const deviceId = assertValidDeviceId(source.device_id);
-  const startValue = source.start_time ?? source.start ?? defaultStart;
-  const endValue = source.end_time ?? source.end ?? defaultEnd;
+  const deviceId = assertValidDeviceId(source.device_id || source.deviceId);
+  const startValue = source.start_time ?? source.startTime ?? source.start ?? defaultStart;
+  const endValue = source.end_time ?? source.endTime ?? source.end ?? defaultEnd;
   const startTime = parseEpoch(startValue, 'start_time');
   const endTime = parseEpoch(endValue, 'end_time');
 

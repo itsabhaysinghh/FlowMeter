@@ -255,6 +255,7 @@ export class MeterService {
     try {
       const response = await axios.delete(DELETE_FLOW_DATA_API_URL, {
         data: request,
+        params: request,
         timeout: 30000,
       });
       const body = response.data?.data ?? response.data;
@@ -273,7 +274,13 @@ export class MeterService {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || error.response?.data?.error || 'Unable to delete data. Please try again.');
+        const backendMsg = error.response?.data?.message || error.response?.data?.error;
+        if (backendMsg) throw new Error(backendMsg);
+
+        if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+          throw new Error('Unable to connect to backend server. Please check your network connection.');
+        }
+        throw new Error(error.message || 'Unable to delete data. Please try again.');
       }
       throw error;
     }

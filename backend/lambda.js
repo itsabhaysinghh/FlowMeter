@@ -19,7 +19,8 @@ export async function handler(event) {
   const path = event.rawPath || event.path || '/';
   const httpMethod = event.requestContext?.http?.method || event.httpMethod || 'GET';
   const query = event.queryStringParameters || {};
-  const origin = event.headers?.origin || '*';
+  const reqHeaders = event.headers || {};
+  const origin = reqHeaders.origin || reqHeaders.Origin || '*';
 
   // Standard web security headers & CORS
   const headers = {
@@ -61,7 +62,7 @@ export async function handler(event) {
       const readingResult = await service.createReading(body);
       return { statusCode: 201, headers, body: JSON.stringify({ success: true, ...readingResult }) };
     } else if (httpMethod === 'DELETE' && (path === '/v1/flow/data' || path === '/flow/data')) {
-      result = await service.deleteReadings(body);
+      result = await service.deleteReadings({ ...query, ...body });
     } else {
       return { statusCode: 404, headers, body: JSON.stringify({ success: false, message: 'Route not found.' }) };
     }
