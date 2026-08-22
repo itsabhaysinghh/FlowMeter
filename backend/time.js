@@ -4,8 +4,17 @@ export function epochSeconds() {
   return Math.floor(Date.now() / 1000);
 }
 
+function toEpochSeconds(value) {
+  if (typeof value === 'number') return Math.floor(value);
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) return Math.floor(parsed);
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? 0 : Math.floor(date.getTime() / 1000);
+}
+
 export function bucketStart(timestamp, granularity) {
-  const istTimestamp = timestamp + IST_OFFSET_SECONDS;
+  const ts = toEpochSeconds(timestamp);
+  const istTimestamp = ts + IST_OFFSET_SECONDS;
   const istDate = new Date(istTimestamp * 1000);
 
   if (granularity === 'hour') {
@@ -29,10 +38,13 @@ export function bucketEnd(timestamp, granularity) {
 }
 
 export function formatIstLabel(timestamp, granularity) {
+  const ts = toEpochSeconds(timestamp);
   const options = granularity === 'hour'
     ? { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }
     : granularity === 'month'
       ? { timeZone: 'Asia/Kolkata', month: 'short', year: 'numeric' }
       : { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit' };
-  return new Intl.DateTimeFormat('en-IN', options).format(new Date(timestamp * 1000));
+  const dateObj = new Date(ts * 1000);
+  if (isNaN(dateObj.getTime())) return String(timestamp);
+  return new Intl.DateTimeFormat('en-IN', options).format(dateObj);
 }
