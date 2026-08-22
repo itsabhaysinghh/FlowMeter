@@ -496,13 +496,16 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   onDeviceChange,
 }) => {
   const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'billing'>('overview');
-  const [activeTab, setActiveTab] = useState<TimeRangeTab>('today');
-  const [specificDate, setSpecificDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().split('T')[0].slice(0, 7));
-  const [selectedYear, setSelectedYear] = useState<string>(() => new Date().getFullYear().toString());
-  const [customDateRange, setCustomDateRange] = useState<DateRange>({
-    startDate: '2026-07-01',
-    endDate: '2026-07-20',
+  const [activeTab, setActiveTab] = useState<TimeRangeTab>(() => (localStorage.getItem('flostat_active_tab') as TimeRangeTab) || 'today');
+  const [specificDate, setSpecificDate] = useState<string>(() => localStorage.getItem('flostat_specific_date') || new Date().toISOString().split('T')[0]);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => localStorage.getItem('flostat_selected_month') || new Date().toISOString().split('T')[0].slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState<string>(() => localStorage.getItem('flostat_selected_year') || new Date().getFullYear().toString());
+  const [customDateRange, setCustomDateRange] = useState<DateRange>(() => {
+    const saved = localStorage.getItem('flostat_custom_date_range');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return { startDate: '2026-07-01', endDate: '2026-07-20' };
   });
 
   const [expandedDeviceId, setExpandedDeviceId] = useState<string | null>(null);
@@ -510,12 +513,53 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   // Search, Filters & Pinning State for Devices Page
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterPill, setFilterPill] = useState<'all' | 'online' | 'offline' | 'highest' | 'lowest'>('all');
-  const [pinnedDevices, setPinnedDevices] = useState<string[]>(['FLOSTAT_001']);
-  const [favoriteDevices, setFavoriteDevices] = useState<string[]>([]);
+  const [pinnedDevices, setPinnedDevices] = useState<string[]>(() => {
+    const saved = localStorage.getItem('flostat_pinned_devices');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return ['FLOSTAT_001'];
+  });
+  const [favoriteDevices, setFavoriteDevices] = useState<string[]>(() => {
+    const saved = localStorage.getItem('flostat_favorite_devices');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
   const [exportNotification, setExportNotification] = useState<string | null>(null);
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [deletionNotification, setDeletionNotification] = useState<string | null>(null);
   const [dataRefreshToken, setDataRefreshToken] = useState(0);
+
+  // Sync states to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('flostat_active_tab', activeTab);
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_specific_date', specificDate);
+  }, [specificDate]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_selected_month', selectedMonth);
+  }, [selectedMonth]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_selected_year', selectedYear);
+  }, [selectedYear]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_custom_date_range', JSON.stringify(customDateRange));
+  }, [customDateRange]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_pinned_devices', JSON.stringify(pinnedDevices));
+  }, [pinnedDevices]);
+
+  React.useEffect(() => {
+    localStorage.setItem('flostat_favorite_devices', JSON.stringify(favoriteDevices));
+  }, [favoriteDevices]);
 
   // Comparison mode selections
   const [compareDevice, setCompareDevice] = useState<string>('FLOSTAT_001');

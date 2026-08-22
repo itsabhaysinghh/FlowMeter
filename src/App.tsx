@@ -57,8 +57,11 @@ export function App() {
             },
           ];
           
+          const savedDeviceId = localStorage.getItem('flostat_selected_device_id');
+          const restoredDevice = savedDeviceId ? deviceList.find((d) => d.id === savedDeviceId) || deviceList[0] : deviceList[0];
+
           setDevices(deviceList);
-          setSelectedDevice(deviceList[0]);
+          setSelectedDevice(restoredDevice);
         }
       } catch (err) {
         console.error('Failed to load devices:', err);
@@ -70,8 +73,11 @@ export function App() {
             { id: 'FLOSTAT_004', name: 'FLOSTAT_004', facility: 'Default Site', status: 'offline', location: 'Block B Tank' },
             { id: 'FLOSTAT_005', name: 'FLOSTAT_005', facility: 'Default Site', status: 'online', location: 'Fire Tank' },
           ];
+          const savedDeviceId = localStorage.getItem('flostat_selected_device_id');
+          const restoredDevice = savedDeviceId ? fallbackList.find((d) => d.id === savedDeviceId) || fallbackList[0] : fallbackList[0];
+
           setDevices(fallbackList);
-          setSelectedDevice(fallbackList[0]);
+          setSelectedDevice(restoredDevice);
         }
       } finally {
         if (active) {
@@ -84,6 +90,11 @@ export function App() {
       active = false;
     };
   }, []);
+
+  const handleDeviceChange = (dev: DeviceOption) => {
+    setSelectedDevice(dev);
+    localStorage.setItem('flostat_selected_device_id', dev.id);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex flex-col font-sans">
@@ -98,7 +109,7 @@ export function App() {
             connectedDataStream={null}
             devices={devices}
             selectedDevice={selectedDevice}
-            onDeviceChange={(dev) => setSelectedDevice(dev)}
+            onDeviceChange={handleDeviceChange}
           />
         )}
       </main>
