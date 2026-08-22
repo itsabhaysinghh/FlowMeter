@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { WaterMeterMonitoringPage } from './pages/WaterMeterMonitoringPage';
 import type { DeviceOption } from './types/meter.types';
 import { meterService } from './services/meter.service';
@@ -113,6 +114,7 @@ export function App() {
           />
         )}
       </main>
+      <Analytics />
     </div>
   );
 }
