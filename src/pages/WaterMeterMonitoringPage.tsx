@@ -1091,7 +1091,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
         <aside className="w-full lg:w-56 shrink-0 self-start space-y-4">
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] space-y-1.5 font-sans">
             <div className="flex items-center gap-2.5 px-2 pb-3 border-b border-slate-100 mb-1">
-              <img src="/flostat-logo.jpg" alt="Flostat Logo" className="w-8 h-8 rounded-lg object-contain border border-slate-100 shadow-sm" />
+              <img src="/flostat-logo.png" alt="Flostat Logo" className="w-8 h-8 rounded-lg object-contain border border-slate-100 shadow-sm" />
               <div>
                 <span className="font-black text-xs text-slate-900 tracking-tight block">FLOSTAT</span>
                 <span className="text-[9px] font-semibold text-slate-400 block -mt-0.5">Water Monitoring</span>
