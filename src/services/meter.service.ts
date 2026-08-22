@@ -238,6 +238,23 @@ export class MeterService {
     }
   }
 
+  private parseDeleteResponse(response: any): DeleteFlowMeterDataResult {
+    const body = response.data?.data ?? response.data;
+    const isConfirmed = body?.success === true || response.data?.success === true;
+
+    if (!isConfirmed) {
+      throw new Error(body?.message || response.data?.message || 'The delete API did not confirm the deletion.');
+    }
+
+    const rawDeletedCount = body?.deleted_count ?? body?.deletedCount ?? response.data?.deleted_count ?? response.data?.deletedCount;
+    const deletedCount = Number(rawDeletedCount);
+    return {
+      success: true,
+      deletedCount: Number.isFinite(deletedCount) ? deletedCount : undefined,
+      message: body?.message || response.data?.message,
+    };
+  }
+
   /**
    * Permanently removes server-side readings for one device and an inclusive
    * Unix-second range. DynamoDB access remains exclusively in the backend.
@@ -252,37 +269,40 @@ export class MeterService {
       throw new Error('The deletion start time must be before the end time.');
     }
 
+    // Try standard DELETE request first
     try {
       const response = await axios.delete(DELETE_FLOW_DATA_API_URL, {
         data: request,
         params: request,
         timeout: 30000,
       });
-      const body = response.data?.data ?? response.data;
-      const isConfirmed = body?.success === true || response.data?.success === true;
-
-      if (!isConfirmed) {
-        throw new Error(body?.message || response.data?.message || 'The delete API did not confirm the deletion.');
-      }
-
-      const rawDeletedCount = body?.deleted_count ?? body?.deletedCount ?? response.data?.deleted_count ?? response.data?.deletedCount;
-      const deletedCount = Number(rawDeletedCount);
-      return {
-        success: true,
-        deletedCount: Number.isFinite(deletedCount) ? deletedCount : undefined,
-        message: body?.message || response.data?.message,
-      };
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const backendMsg = error.response?.data?.message || error.response?.data?.error;
+      return this.parseDeleteResponse(response);
+    } catch (deleteError) {
+      if (axios.isAxiosError(deleteError)) {
+        const backendMsg = deleteError.response?.data?.message || deleteError.response?.data?.error;
         if (backendMsg) throw new Error(backendMsg);
 
-        if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        // If DELETE is blocked by browser CORS preflight (ERR_NETWORK or no response),
+        // fallback to POST delete route alias.
+        try {
+          const postUrl = DELETE_FLOW_DATA_API_URL.endsWith('/data')
+            ? `${DELETE_FLOW_DATA_API_URL}/delete`
+            : `${DELETE_FLOW_DATA_API_URL}`;
+          const postResponse = await axios.post(postUrl, request, { timeout: 30000 });
+          return this.parseDeleteResponse(postResponse);
+        } catch (postError) {
+          if (axios.isAxiosError(postError)) {
+            const postMsg = postError.response?.data?.message || postError.response?.data?.error;
+            if (postMsg) throw new Error(postMsg);
+          }
+        }
+
+        if (deleteError.message === 'Network Error' || deleteError.code === 'ERR_NETWORK') {
           throw new Error('Unable to connect to backend server. Please check your network connection.');
         }
-        throw new Error(error.message || 'Unable to delete data. Please try again.');
+        throw new Error(deleteError.message || 'Unable to delete data. Please try again.');
       }
-      throw error;
+      throw deleteError;
     }
   }
 

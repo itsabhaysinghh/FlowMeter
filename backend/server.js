@@ -54,7 +54,8 @@ export function createServer({ config = getBackendConfig(), repository } = {}) {
         authorizeMutation(request, config.apiKey);
         return sendJson(response, 201, { success: true, ...(await flowService.createReading(await readJson(request))) }, origin);
       }
-      if (request.method === 'DELETE' && (url.pathname === '/v1/flow/data' || url.pathname === '/flow/data')) {
+      if ((request.method === 'DELETE' && (url.pathname === '/v1/flow/data' || url.pathname === '/flow/data')) ||
+          (request.method === 'POST' && (url.pathname === '/v1/flow/data/delete' || url.pathname === '/flow/data/delete' || url.pathname === '/v1/flow/delete' || url.pathname === '/flow/delete'))) {
         const body = await readJson(request).catch(() => ({}));
         const query = Object.fromEntries(url.searchParams);
         const payload = { ...query, ...body };

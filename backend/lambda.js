@@ -61,7 +61,8 @@ export async function handler(event) {
     } else if (httpMethod === 'POST' && (path === '/v1/flow/readings' || path === '/flow/readings')) {
       const readingResult = await service.createReading(body);
       return { statusCode: 201, headers, body: JSON.stringify({ success: true, ...readingResult }) };
-    } else if (httpMethod === 'DELETE' && (path === '/v1/flow/data' || path === '/flow/data')) {
+    } else if ((httpMethod === 'DELETE' && (path === '/v1/flow/data' || path === '/flow/data')) ||
+               (httpMethod === 'POST' && (path === '/v1/flow/data/delete' || path === '/flow/data/delete' || path === '/v1/flow/delete' || path === '/flow/delete'))) {
       result = await service.deleteReadings({ ...query, ...body });
     } else {
       return { statusCode: 404, headers, body: JSON.stringify({ success: false, message: 'Route not found.' }) };

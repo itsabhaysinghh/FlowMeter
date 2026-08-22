@@ -57,7 +57,18 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       Name: FlostatHttpApi
-      CorsConfiguration: true
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+          - HEAD
+        MaxAge: 86400
 
   FlostatApiFunction:
     Type: AWS::Serverless::Function
