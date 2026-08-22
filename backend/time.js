@@ -39,12 +39,22 @@ export function bucketEnd(timestamp, granularity) {
 
 export function formatIstLabel(timestamp, granularity) {
   const ts = toEpochSeconds(timestamp);
-  const options = granularity === 'hour'
-    ? { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }
-    : granularity === 'month'
-      ? { timeZone: 'Asia/Kolkata', month: 'short', year: 'numeric' }
-      : { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit' };
   const dateObj = new Date(ts * 1000);
   if (isNaN(dateObj.getTime())) return String(timestamp);
-  return new Intl.DateTimeFormat('en-IN', options).format(dateObj);
+
+  if (granularity === 'hour') {
+    return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(dateObj);
+  }
+  if (granularity === 'month') {
+    return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', year: 'numeric' }).format(dateObj);
+  }
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(dateObj);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }

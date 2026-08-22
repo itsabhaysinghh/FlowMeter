@@ -63,38 +63,84 @@ const normalizeTodayLabel = (label: string): string => {
 };
 
 const parseFlexibleDate = (label: string): Date | null => {
-  // 1. Try YYYY-MM-DD
-  const yyyyMmDdRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
-  const match = label.match(yyyyMmDdRegex);
-  if (match) {
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1;
-    const day = parseInt(match[3], 10);
+  if (!label) return null;
+  const trimmed = label.trim();
+
+  // 1. Try YYYY-MM-DD or YYYY/MM/DD
+  const yyyyMmDdMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (yyyyMmDdMatch) {
+    const year = parseInt(yyyyMmDdMatch[1], 10);
+    const month = parseInt(yyyyMmDdMatch[2], 10) - 1;
+    const day = parseInt(yyyyMmDdMatch[3], 10);
     return new Date(year, month, day);
   }
 
-  // 2. Try MMM DD (e.g., "Aug 05" or "Aug 5")
-  const mmmDdRegex = /^([a-zA-Z]{3})\s+(\d{1,2})$/;
-  const mmmDdMatch = label.match(mmmDdRegex);
+  const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  // 2. Try DD MMM YYYY or DD-MMM-YYYY (e.g. "22 Aug 2026", "22-Aug-2026")
+  const ddMmmYyyyMatch = trimmed.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3})[\s\-]+(\d{4})$/);
+  if (ddMmmYyyyMatch) {
+    const day = parseInt(ddMmmYyyyMatch[1], 10);
+    const monthStr = ddMmmYyyyMatch[2].toLowerCase();
+    const year = parseInt(ddMmmYyyyMatch[3], 10);
+    const monthIndex = monthNames.indexOf(monthStr);
+    if (monthIndex !== -1) {
+      return new Date(year, monthIndex, day);
+    }
+  }
+
+  // 3. Try MMM DD YYYY (e.g. "Aug 22 2026", "Aug-22-2026")
+  const mmmDdYyyyMatch = trimmed.match(/^([a-zA-Z]{3})[\s\-]+(\d{1,2})[\s\-]+(\d{4})$/);
+  if (mmmDdYyyyMatch) {
+    const monthStr = mmmDdYyyyMatch[1].toLowerCase();
+    const day = parseInt(mmmDdYyyyMatch[2], 10);
+    const year = parseInt(mmmDdYyyyMatch[3], 10);
+    const monthIndex = monthNames.indexOf(monthStr);
+    if (monthIndex !== -1) {
+      return new Date(year, monthIndex, day);
+    }
+  }
+
+  // 4. Try DD MMM (e.g. "22 Aug" or "22-Aug" or "05 Aug")
+  const ddMmmMatch = trimmed.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3})$/);
+  if (ddMmmMatch) {
+    const day = parseInt(ddMmmMatch[1], 10);
+    const monthStr = ddMmmMatch[2].toLowerCase();
+    const monthIndex = monthNames.indexOf(monthStr);
+    if (monthIndex !== -1) {
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      let d = new Date(currentYear, monthIndex, day);
+      if (d > today) {
+        d = new Date(currentYear - 1, monthIndex, day);
+      }
+      return d;
+    }
+  }
+
+  // 5. Try MMM DD (e.g., "Aug 22" or "Aug 05")
+  const mmmDdMatch = trimmed.match(/^([a-zA-Z]{3})[\s\-]+(\d{1,2})$/);
   if (mmmDdMatch) {
-    const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
     const monthStr = mmmDdMatch[1].toLowerCase();
     const day = parseInt(mmmDdMatch[2], 10);
     const monthIndex = monthNames.indexOf(monthStr);
     if (monthIndex !== -1) {
       const today = new Date();
       const currentYear = today.getFullYear();
-      const d = new Date(currentYear, monthIndex, day);
+      let d = new Date(currentYear, monthIndex, day);
       if (d > today) {
-        d.setFullYear(currentYear - 1);
+        d = new Date(currentYear - 1, monthIndex, day);
       }
       return d;
     }
   }
 
-  // 3. Fallback to standard new Date()
-  const d = new Date(label);
+  // 6. Fallback to Date.parse with year guard
+  const d = new Date(trimmed);
   if (!isNaN(d.getTime())) {
+    if (d.getFullYear() < 2020) {
+      d.setFullYear(new Date().getFullYear());
+    }
     return d;
   }
 
