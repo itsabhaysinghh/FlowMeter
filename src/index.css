@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
   body {
     @apply bg-flostat-bg dark:bg-dark-bg text-flostat-text dark:text-dark-text font-sans selection:bg-flostat-secondary/20 selection:text-flostat-primary;
   }
