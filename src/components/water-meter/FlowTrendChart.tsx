@@ -11,6 +11,7 @@ import {
 import { ZoomIn, ZoomOut, RotateCcw, Activity } from 'lucide-react';
 import type { FlowTrendDataPoint } from '../../types/meter.types';
 import { formatNumber } from '../../utils/formatters';
+import { GlowingBadge } from '../ui/glowing-badge';
 
 interface FlowTrendChartProps {
   data?: FlowTrendDataPoint[] | null;
@@ -72,13 +73,9 @@ export const FlowTrendChart: React.FC<FlowTrendChartProps> = ({ data }) => {
       {/* Header Bar: Live Stream Status & Redesigned Zoom Controls */}
       <div className="flex items-center justify-between gap-3 mb-3 text-xs">
         {/* Live Stream Telemetry Indicator */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shadow-2xs">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="tracking-wide">LIVE TELEMETRY STREAM</span>
-        </div>
+        <GlowingBadge variant="success" pulse={true}>
+          LIVE TELEMETRY STREAM
+        </GlowingBadge>
 
         {/* Tactile Zoom Control Pill */}
         <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/60 shadow-inner">

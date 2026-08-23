@@ -29,6 +29,7 @@ import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
 import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { generateFallbackTelemetry } from '../utils/simulator';
+import { GlowingBadge } from '../components/ui/glowing-badge';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -111,14 +112,12 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
       {/* Inline Dashboard Header with Refresh and Connection Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-flostat-border/60 dark:border-slate-800/40">
         <div className="flex items-center gap-3">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-            data.metadata.deviceStatus === 'online'
-              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
-              : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${data.metadata.deviceStatus === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+          <GlowingBadge
+            variant={data.metadata.deviceStatus === 'online' ? 'success' : 'error'}
+            pulse={data.metadata.deviceStatus === 'online'}
+          >
             {data.metadata.deviceStatus === 'online' ? 'Online' : 'Offline'}
-          </span>
+          </GlowingBadge>
           <span className="text-[11px] text-slate-400 dark:text-slate-400">
             Last seen: {data.metadata.lastUpdated} | Refreshed: {lastRefreshed}
           </span>
@@ -998,19 +997,18 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
       {/* Top Global SaaS Status & Health Ticker */}
       <div className="flex flex-wrap items-center justify-between gap-4 p-3 px-5 bg-white border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-500 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] font-sans">
         <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
+          <div className="flex items-center gap-2">
             <span className="text-slate-500">System Health:</span>
-            <span className="text-emerald-600 font-bold">98.2% Optimal</span>
+            <GlowingBadge variant="success" pulse={true}>
+              98.2% Optimal
+            </GlowingBadge>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+          <div className="flex items-center gap-2">
             <span className="text-slate-500">Meters Status:</span>
-            <span className="text-slate-700 font-bold">4 Online | 1 Standby</span>
+            <GlowingBadge variant="info" pulse={false}>
+              4 Online | 1 Standby
+            </GlowingBadge>
           </div>
         </div>
 
@@ -1539,14 +1537,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                                   onClick={() => toggleDeviceExpand(device.id, device)}
                                   className="py-4 px-4 text-center"
                                 >
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                    device.status === 'online'
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30'
-                                      : 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/30'
-                                  }`}>
-                                    <span className={`w-1 h-1 rounded-full mr-1.5 ${device.status === 'online' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                  <GlowingBadge
+                                    variant={device.status === 'online' ? 'success' : 'error'}
+                                    pulse={device.status === 'online'}
+                                  >
                                     {device.status === 'online' ? 'Online' : 'Offline'}
-                                  </span>
+                                  </GlowingBadge>
                                 </td>
 
                                 {/* Actions trigger arrow */}
