@@ -30,6 +30,7 @@ import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { generateFallbackTelemetry } from '../utils/simulator';
 import { GlowingBadge } from '../components/ui/glowing-badge';
+import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -143,13 +144,12 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
             </div>
           </div>
 
-          <button
+          <RefreshButton
+            variant="outline"
+            size="icon-sm"
             onClick={() => refetch()}
-            className="p-1.5 rounded-xl border border-flostat-border dark:border-slate-800 bg-white dark:bg-dark-card text-slate-600 dark:text-slate-300 hover:text-flostat-primary dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95 cursor-pointer"
             title="Refresh Telemetry Now"
-          >
-            <Activity className="w-4 h-4" />
-          </button>
+          />
         </div>
       </div>
 
@@ -1042,13 +1042,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                   <ChevronDown className="w-3 h-3" />
                 </div>
               </div>
-              <button
+              <RefreshButton
+                variant="outline"
+                size="icon-sm"
                 onClick={() => refetch()}
-                className="p-1 rounded border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all cursor-pointer"
                 title="Refresh Now"
-              >
-                <Activity className="w-3 h-3" />
-              </button>
+              />
             </div>
           )}
         </div>
