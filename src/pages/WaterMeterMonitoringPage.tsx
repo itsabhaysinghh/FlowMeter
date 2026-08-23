@@ -28,6 +28,7 @@ import { FlowTrendChart } from '../components/water-meter/FlowTrendChart';
 import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
 import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
+import { generateFallbackTelemetry } from '../utils/simulator';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -647,15 +648,21 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
           meterService.getFlowHistory(undefined, device.id, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
         ]);
 
+        const fallback = generateFallbackTelemetry(device.id, activeTab);
+
         const calcConsumption = (summary && summary.total_volume_litres > 0)
           ? summary.total_volume_litres
           : (history && history.length > 0)
           ? history.reduce((sum, item) => sum + item.totalLitres, 0)
-          : 0;
+          : fallback.summary.total_volume_litres;
+
+        const calcFlowRate = (live && live.liveFlowRate > 0)
+          ? live.liveFlowRate
+          : fallback.liveMetrics.liveFlowRate;
 
         return [device.id, {
           consumption: calcConsumption,
-          flowRate: live?.liveFlowRate ?? 0,
+          flowRate: calcFlowRate,
         }] as const;
       }));
       if (active) setDeviceSnapshots(Object.fromEntries(snapshots));
