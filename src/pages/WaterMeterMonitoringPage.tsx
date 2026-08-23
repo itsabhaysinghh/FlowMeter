@@ -17,13 +17,7 @@ import {
   CreditCard,
   Trash2,
 } from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer
-} from 'recharts';
+import { PieChart, PieSlice, PieCenter, Legend, type PieData } from '../components/ui/PieChart';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult } from '../types/meter.types';
 import { useWaterMeterData } from '../hooks/useWaterMeterData';
 import { meterService } from '../services/meter.service';
@@ -42,46 +36,6 @@ export interface WaterMeterMonitoringPageProps {
   selectedDevice: DeviceOption | null;
   onDeviceChange?: (device: DeviceOption) => void;
 }
-
-// Tooltip customization for donut slices
-const CustomPieTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl text-xs text-white max-w-[240px] backdrop-blur-md">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-          <span className="font-bold text-slate-400">Device</span>
-          <span className="font-extrabold text-white tracking-tight">{data.name}</span>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Consumption:</span>
-            <span className="font-bold text-blue-400">{formatNumber(data.actualValue !== undefined ? data.actualValue : data.value, 0)} L</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Contribution:</span>
-            <span className="font-bold text-emerald-400">{data.percentage.toFixed(1)}%</span>
-          </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Current Flow Rate:</span>
-            <span className="font-bold text-indigo-400">{data.flowRate} L/min</span>
-          </div>
-          <div className="flex justify-between gap-4 items-center">
-            <span className="text-slate-400">Status:</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-              data.status === 'online'
-                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-900/60'
-                : 'bg-rose-950/40 text-rose-400 border-rose-900/60'
-            }`}>
-              {data.status === 'online' ? 'Online' : 'Offline'}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 const formatMonthLabel = (monthStr?: string) => {
   if (!monthStr) return '';
@@ -796,6 +750,15 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     });
   }, [pieData, totalConsumption]);
 
+  const pieChartData: PieData[] = React.useMemo(() => {
+    return renderPieData.map((item) => ({
+      label: item.name,
+      value: item.actualValue !== undefined ? item.actualValue : item.value,
+      color: item.color,
+      percentage: item.percentage,
+    }));
+  }, [renderPieData]);
+
 
 
   const toggleDeviceExpand = (deviceId: string, devOpt?: DeviceOption) => {
@@ -1214,63 +1177,51 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     <p className="text-[10px] text-slate-500 dark:text-dark-muted mt-0.5">Device percentage share of aggregate volume</p>
                   </div>
                   
-                  <div className="relative flex items-center justify-center py-6">
-                    <div className="relative w-full max-w-[240px] h-[240px]">
-                      <ResponsiveContainer width="100%" height="100%" className="relative z-10">
-                        <PieChart>
-                          <Pie
-                            data={renderPieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={65}
-                            outerRadius={95}
-                            paddingAngle={3}
-                            dataKey="value"
-                          >
-                            {renderPieData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <RechartsTooltip 
-                            content={<CustomPieTooltip />} 
-                            wrapperStyle={{ zIndex: 50 }} 
-                            position={{ x: 230, y: 40 }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      
-                      {/* Inner text inside donut */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
-                        <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
-                          Total
-                        </span>
-                        <span className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">
-                          {formatNumber(totalConsumption, 0)} L
-                        </span>
-                        <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase mt-0.5">
-                          {activeTab === 'today'
-                            ? 'Today'
-                            : activeTab === 'week'
-                            ? 'Last 7 Days'
-                            : activeTab === 'specific'
-                            ? formatDateString(specificDate)
-                            : activeTab === 'month'
-                            ? formatMonthLabel(selectedMonth)
-                            : activeTab === 'year'
-                            ? selectedYear
-                            : `${formatDateString(customDateRange.startDate)} - ${formatDateString(customDateRange.endDate)}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <PieChart data={pieChartData} size={250} innerRadius={65} padAngle={0.04}>
+                      {pieChartData.map((_, index) => (
+                        <PieSlice
+                          key={index}
+                          index={index}
+                          showGlow={true}
+                          hoverEffect="translate"
+                          hoverOffset={8}
+                        />
+                      ))}
+                      <PieCenter>
+                        {({ hoveredData, totalValue }) => (
+                          <div className="flex flex-col items-center justify-center text-center">
+                            <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                              {hoveredData ? hoveredData.label : 'Total'}
+                            </span>
+                            <span className="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">
+                              {formatNumber(hoveredData ? hoveredData.value : totalValue, 0)} L
+                            </span>
+                            {hoveredData ? (
+                              <span className="text-[9px] font-bold text-emerald-500 uppercase mt-0.5">
+                                {hoveredData.percentage.toFixed(1)}% Share
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase mt-0.5">
+                                {activeTab === 'today'
+                                  ? 'Today'
+                                  : activeTab === 'week'
+                                  ? 'Last 7 Days'
+                                  : activeTab === 'specific'
+                                  ? formatDateString(specificDate)
+                                  : activeTab === 'month'
+                                  ? formatMonthLabel(selectedMonth)
+                                  : activeTab === 'year'
+                                  ? selectedYear
+                                  : `${formatDateString(customDateRange.startDate)} - ${formatDateString(customDateRange.endDate)}`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </PieCenter>
+                    </PieChart>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                    {pieData.map((item) => (
-                      <div key={item.name} className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                        <span>{item.name} ({item.percentage.toFixed(0)}%)</span>
-                      </div>
-                    ))}
+                    <Legend className="mt-4" />
                   </div>
                 </div>
 
