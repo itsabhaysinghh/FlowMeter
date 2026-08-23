@@ -65,8 +65,15 @@ export function generateFallbackTelemetry(deviceId: string, _period: TimeRangeTa
     });
   }
 
-  // Ensure minimum realistic non-zero total volume
-  const todaysConsumption = Number(Math.max(totalVolume, 61.4).toFixed(1));
+  const deviceBaselines: Record<string, number> = {
+    FLOSTAT_001: 165.4,
+    FLOSTAT_002: 61.4,
+    FLOSTAT_003: 45.6,
+    FLOSTAT_004: 18.2,
+    FLOSTAT_005: 8.5,
+  };
+  const baseline = deviceBaselines[deviceId] || 50.0;
+  const todaysConsumption = Number(Math.max(totalVolume, baseline).toFixed(1));
 
   // Generate 1-minute flow trend
   const flowTrend: FlowTrendDataPoint[] = [];
