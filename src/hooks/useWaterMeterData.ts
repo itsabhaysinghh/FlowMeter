@@ -90,7 +90,11 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
             ? {
                 ...metrics,
                 todaysConsumption:
-                  summary?.total_volume_litres ?? metrics.todaysConsumption,
+                  (summary && summary.total_volume_litres > 0)
+                    ? summary.total_volume_litres
+                    : (history && history.length > 0)
+                    ? history.reduce((sum, item) => sum + item.totalLitres, 0)
+                    : metrics.todaysConsumption,
                 averageFlowRate:
                   history && history.length > 0
                     ? history.reduce((sum, item) => sum + item.flowRate, 0) /

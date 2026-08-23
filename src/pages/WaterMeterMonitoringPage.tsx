@@ -641,12 +641,20 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     let active = true;
     async function loadDeviceSnapshots() {
       const snapshots = await Promise.all(devices.map(async (device) => {
-        const [summary, live] = await Promise.all([
+        const [summary, live, history] = await Promise.all([
           meterService.getConsumption(activeTab, device.id, customDateRange, specificDate, selectedMonth, selectedYear),
           meterService.getLiveFlowRate(device.id),
+          meterService.getFlowHistory(undefined, device.id, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
         ]);
+
+        const calcConsumption = (summary && summary.total_volume_litres > 0)
+          ? summary.total_volume_litres
+          : (history && history.length > 0)
+          ? history.reduce((sum, item) => sum + item.totalLitres, 0)
+          : 0;
+
         return [device.id, {
-          consumption: summary?.total_volume_litres ?? 0,
+          consumption: calcConsumption,
           flowRate: live?.liveFlowRate ?? 0,
         }] as const;
       }));
