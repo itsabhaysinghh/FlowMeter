@@ -76,8 +76,8 @@ export function createIstDeletionRequest(
 ): DeleteFlowMeterDataRequest | null {
   if (input.mode === 'all') {
     if (!deviceId) return null;
-    const endSec = Math.floor(Date.now() / 1000);
-    const startSec = endSec - Math.floor(4.9 * 365.25 * 24 * 60 * 60);
+    const endSec = Math.floor(Date.now() / 1000) + 3600;
+    const startSec = Math.max(946684800, endSec - Math.floor(4.95 * 365.25 * 24 * 60 * 60));
     return { device_id: deviceId, start_time: startSec, end_time: endSec };
   }
 

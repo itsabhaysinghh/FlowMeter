@@ -28,7 +28,6 @@ import { FlowTrendChart } from '../components/water-meter/FlowTrendChart';
 import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
 import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
-import { generateFallbackTelemetry } from '../utils/simulator';
 import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
 
@@ -647,17 +646,15 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
           meterService.getFlowHistory(undefined, device.id, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
         ]);
 
-        const fallback = generateFallbackTelemetry(device.id, activeTab);
-
         const calcConsumption = (summary && summary.total_volume_litres > 0)
           ? summary.total_volume_litres
           : (history && history.length > 0)
           ? history.reduce((sum, item) => sum + item.totalLitres, 0)
-          : fallback.summary.total_volume_litres;
+          : 0;
 
         const calcFlowRate = (live && live.liveFlowRate > 0)
           ? live.liveFlowRate
-          : fallback.liveMetrics.liveFlowRate;
+          : 0;
 
         return [device.id, {
           consumption: calcConsumption,
@@ -741,27 +738,20 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     percentage: totalConsumption > 0 ? (item.value / totalConsumption) * 100 : 0,
   }));
 
-  // For rendering slices visually clearly (e.g. at least 4% angle for smaller slices)
   const renderPieData = React.useMemo(() => {
     if (totalConsumption === 0) {
-      return pieData.map(item => ({
+      return pieData.map((item) => ({
         ...item,
-        value: 1, // equal slice
-        actualValue: 0
+        value: 0,
+        actualValue: 0,
       }));
     }
     
-    const minPct = 4; // minimum visual percentage share
-    const minValue = totalConsumption * (minPct / 100);
-    
-    return pieData.map(item => {
-      const visualVal = item.value === 0 ? minValue * 0.7 : Math.max(item.value, minValue);
-      return {
-        ...item,
-        value: visualVal,
-        actualValue: item.value
-      };
-    });
+    return pieData.map((item) => ({
+      ...item,
+      value: item.value,
+      actualValue: item.value,
+    }));
   }, [pieData, totalConsumption]);
 
   const pieChartData: PieData[] = React.useMemo(() => {
@@ -981,14 +971,25 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const comparePct = comparePrevVal > 0 ? (compareDelta / comparePrevVal) * 100 : 0;
 
   const handleDataDeleted = (result: DeleteFlowMeterDataResult, deviceId: string) => {
+    // Instantly reset local snapshot for the deleted device
+    setDeviceSnapshots((prev) => ({
+      ...prev,
+      [deviceId]: { consumption: 0, flowRate: 0 },
+    }));
     setDataRefreshToken((token) => token + 1);
     refetch();
 
-    const countMessage = result.deletedCount === undefined
-      ? 'Data deleted successfully.'
-      : `Successfully deleted ${new Intl.NumberFormat('en-IN').format(result.deletedCount)} record${result.deletedCount === 1 ? '' : 's'} from ${deviceId}.`;
+    let countMessage = 'Data deletion request processed.';
+    if (result.deletedCount === 0) {
+      countMessage = `0 records found for ${deviceId} in the selected date range. If your data is from a different time period, select that date range or 'Delete full records'.`;
+    } else if (result.deletedCount !== undefined && result.deletedCount > 0) {
+      countMessage = `Successfully deleted ${new Intl.NumberFormat('en-IN').format(result.deletedCount)} record${result.deletedCount === 1 ? '' : 's'} from ${deviceId}. Device logs updated.`;
+    } else if (result.message) {
+      countMessage = result.message;
+    }
+
     setDeletionNotification(countMessage);
-    window.setTimeout(() => setDeletionNotification(null), 5000);
+    window.setTimeout(() => setDeletionNotification(null), 7000);
   };
 
   return (

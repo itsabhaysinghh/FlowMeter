@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
 import { meterService } from '../services/meter.service';
 import { formatLastSeen } from '../utils/formatters';
-import { generateFallbackTelemetry } from '../utils/simulator';
 
 export interface UseWaterMeterDataOptions {
   activeTab?: TimeRangeTab;
@@ -69,18 +68,28 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
           meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
       ]);
 
-      const fallback = generateFallbackTelemetry(meterId, activeTab);
-
-      const effectiveMetrics = metrics || fallback.liveMetrics;
-      const effectiveSummary = (summary && summary.total_volume_litres > 0) ? summary : fallback.summary;
-      const effectiveHistory = (history && history.length > 0) ? history : fallback.history;
-      const effectiveTrend = (trend && trend.length > 0) ? trend : fallback.flowTrend;
+      const effectiveMetrics = metrics || {
+        liveFlowRate: 0,
+        todaysConsumption: 0,
+        averageFlowRate: 0,
+        connectionStatus: 'Connected',
+      };
+      const effectiveSummary = summary || {
+        total_volume_litres: 0,
+        average_flow_rate_lpm: 0,
+        minimum_flow_rate_lpm: 0,
+        maximum_flow_rate_lpm: 0,
+        consumption_chart: [],
+        flow_trend_chart: [],
+      };
+      const effectiveHistory = history || [];
+      const effectiveTrend = (trend && trend.length > 0) ? trend : (summary?.flow_trend_chart || []);
 
       const calcConsumption = (summary && summary.total_volume_litres > 0)
         ? summary.total_volume_litres
         : (history && history.length > 0)
         ? history.reduce((sum, item) => sum + item.totalLitres, 0)
-        : fallback.summary.total_volume_litres;
+        : 0;
 
       setData({
         metadata: metadata || {
@@ -103,8 +112,8 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
               ? effectiveHistory.reduce((sum, item) => sum + item.flowRate, 0) / effectiveHistory.length
               : effectiveMetrics.averageFlowRate,
         },
-        consumptionTrend: effectiveSummary.consumption_chart || fallback.summary.consumption_chart,
-        flowTrend: effectiveSummary.flow_trend_chart || effectiveTrend || fallback.flowTrend,
+        consumptionTrend: effectiveSummary.consumption_chart || [],
+        flowTrend: effectiveSummary.flow_trend_chart || effectiveTrend || [],
         history: effectiveHistory,
       });
       setState('connected');
