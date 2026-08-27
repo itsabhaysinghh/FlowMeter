@@ -14,7 +14,6 @@ import {
   Download,
   Clock,
   Zap,
-  CreditCard,
   Trash2,
 } from 'lucide-react';
 import { PieChart, PieSlice, PieCenter, Legend, type PieData } from '../components/ui/PieChart';
@@ -448,7 +447,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   selectedDevice,
   onDeviceChange,
 }) => {
-  const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'billing'>('overview');
+  const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare'>('overview');
   const [activeTab, setActiveTab] = useState<TimeRangeTab>(() => (localStorage.getItem('flostat_active_tab') as TimeRangeTab) || 'today');
   const [specificDate, setSpecificDate] = useState<string>(() => localStorage.getItem('flostat_specific_date') || new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => localStorage.getItem('flostat_selected_month') || new Date().toISOString().split('T')[0].slice(0, 7));
@@ -564,21 +563,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const [compareCurrentVal, setCompareCurrentVal] = useState<number>(0);
   const [comparePrevVal, setComparePrevVal] = useState<number>(0);
   const [isCompareLoading, setIsCompareLoading] = useState<boolean>(false);
-
-  // Utility Billing States
-  const [billingCurrency, setBillingCurrency] = useState<string>(() => localStorage.getItem('flostat_billing_currency') || 'INR');
-  const [billingRatePerKl, setBillingRatePerKl] = useState<number>(() => Number(localStorage.getItem('flostat_billing_rate') || '45'));
-
-  const getCurrencySymbol = (currency: string) => {
-    switch (currency) {
-      case 'INR': return '₹';
-      case 'USD': return '$';
-      case 'EUR': return '€';
-      case 'AED': return 'AED';
-      case 'GBP': return '£';
-      default: return '₹';
-    }
-  };
 
   // Date Range Popover States
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -1123,17 +1107,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               <span>Comparison Mode</span>
             </button>
 
-            <button
-              onClick={() => setActiveNav('billing')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'billing'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Utility Billing</span>
-            </button>
           </div>
         </aside>
 
@@ -1824,268 +1797,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                   </>
                 );
               })()}
-
-            </div>
-          )}
-
-          {/* VIEW 4: Utility Billing View */}
-          {activeNav === 'billing' && (
-            <div className="space-y-6 animate-fade-in">
-              
-              {/* Billing Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base font-bold text-slate-800 tracking-tight">
-                      Water Utility Billing & Cost Calculator
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-700 border border-emerald-200 tracking-wider">
-                      Custom Tariff
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Set your custom water price per kL and currency. Your pricing settings are saved permanently.
-                  </p>
-                </div>
- 
-                {/* Export Button & Period Tab Switcher */}
-                <div className="flex flex-wrap items-center gap-3 shrink-0">
-                  {/* Period Switcher (shared global state) */}
-                  <TimeFrameSelector
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    specificDate={specificDate}
-                    setSpecificDate={setSpecificDate}
-                    selectedMonth={selectedMonth}
-                    setSelectedMonth={setSelectedMonth}
-                    selectedYear={selectedYear}
-                    setSelectedYear={setSelectedYear}
-                    customDateRange={customDateRange}
-                    startDate={startDate}
-                    setStartDate={setStartDate}
-                    endDate={endDate}
-                    setEndDate={setEndDate}
-                    isDatePickerOpen={isDatePickerOpen}
-                    setIsDatePickerOpen={setIsDatePickerOpen}
-                    handlePreset={handlePreset}
-                    handleApplyRange={handleApplyRange}
-                    popoverRef={popoverRef}
-                  />
-
-                  <button
-                    onClick={() => {
-                      setExportNotification("Monthly utility billing statement successfully exported as CSV.");
-                      setTimeout(() => setExportNotification(null), 4000);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm shadow-blue-500/10 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Export Monthly Statement</span>
-                  </button>
-                </div>
-              </div>
-
-              {exportNotification && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl animate-fade-in flex items-center justify-between">
-                  <span>{exportNotification}</span>
-                  <button onClick={() => setExportNotification(null)} className="text-emerald-500 hover:text-emerald-800 font-bold ml-2">×</button>
-                </div>
-              )}
-
-              {/* Billing Rate & Currency Setup panel */}
-              <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-blue-500" />
-                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Billing Rate & Currency Setup</h3>
-                  </div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Permanent Local Storage Enabled</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                  
-                  {/* Select Currency */}
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Currency</label>
-                    <select
-                      value={billingCurrency}
-                      onChange={(e) => {
-                        const newCurr = e.target.value;
-                        setBillingCurrency(newCurr);
-                        localStorage.setItem('flostat_billing_currency', newCurr);
-                      }}
-                      className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
-                    >
-                      <option value="INR">₹ INR (Indian Rupee)</option>
-                      <option value="USD">$ USD (US Dollar)</option>
-                      <option value="EUR">€ EUR (Euro)</option>
-                      <option value="AED">AED (UAE Dirham)</option>
-                      <option value="GBP">£ GBP (British Pound)</option>
-                    </select>
-                  </div>
-
-                  {/* Price per kL */}
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Price per kL (1,000 Litres)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">
-                        {getCurrencySymbol(billingCurrency)}
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={billingRatePerKl}
-                        onChange={(e) => {
-                          const val = Math.max(0, parseFloat(e.target.value) || 0);
-                          setBillingRatePerKl(val);
-                          localStorage.setItem('flostat_billing_rate', String(val));
-                        }}
-                        className="w-full pl-8 pr-12 py-2 rounded-lg border border-slate-200 bg-white text-slate-850 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25"
-                        placeholder="Enter price per 1,000 L..."
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">
-                        / kL
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Effective Pricing box */}
-                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col justify-center min-h-[64px]">
-                    <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider">Effective Pricing:</span>
-                    <div className="text-sm font-extrabold text-slate-800 mt-1">
-                      {getCurrencySymbol(billingCurrency)}{billingRatePerKl} per 1,000 L
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* Tanks billing summary table */}
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
-                <div className="p-4 px-6 border-b border-slate-100 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tanks Billing Summary</h3>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Calculated based on active period water consumption</p>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 bg-slate-100 rounded text-slate-650 font-bold capitalize">
-                    {activeTab === 'today'
-                      ? 'Today'
-                      : activeTab === 'week'
-                      ? 'Last 7 Days'
-                      : activeTab === 'specific'
-                      ? formatDateString(specificDate)
-                      : activeTab === 'month'
-                      ? formatMonthLabel(selectedMonth)
-                      : activeTab === 'year'
-                      ? selectedYear
-                      : `${formatDateString(customDateRange.startDate)} - ${formatDateString(customDateRange.endDate)}`}
-                  </span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="py-3 px-6">Meter ID</th>
-                        <th className="py-3 px-6">Meter Name</th>
-                        <th className="py-3 px-6">Location</th>
-                        <th className="py-3 px-6 text-right">Consumption (L)</th>
-                        <th className="py-3 px-6 text-right">Consumption (kL)</th>
-                        <th className="py-3 px-6 text-right">Tariff Rate</th>
-                        <th className="py-3 px-6 text-right">Total Bill</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                      {(() => {
-                        // Calculate billing items
-                        let totalLitres = 0;
-                        const items = [
-                          {
-                            id: 'FLOSTAT_001',
-                            name: 'FLOSTAT_001',
-                            location: 'Main Overhead Tank',
-                            value: flostat001Val,
-                          },
-                          {
-                            id: 'FLOSTAT_002',
-                            name: 'FLOSTAT_002',
-                            location: 'Ground Tank',
-                            value: getDeviceConsumption('FLOSTAT_002'),
-                          },
-                          {
-                            id: 'FLOSTAT_003',
-                            name: 'FLOSTAT_003',
-                            location: 'Block A Tank',
-                            value: getDeviceConsumption('FLOSTAT_003'),
-                          },
-                          {
-                            id: 'FLOSTAT_004',
-                            name: 'FLOSTAT_004',
-                            location: 'Block B Tank',
-                            value: getDeviceConsumption('FLOSTAT_004'),
-                          },
-                          {
-                            id: 'FLOSTAT_005',
-                            name: 'FLOSTAT_005',
-                            location: 'Fire Hydrant Tank',
-                            value: getDeviceConsumption('FLOSTAT_005'),
-                          },
-                        ];
-
-                        return (
-                          <>
-                            {items.map((item) => {
-                              totalLitres += item.value;
-                              const kl = item.value / 1000;
-                              const billAmount = kl * billingRatePerKl;
-
-                              return (
-                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="py-3.5 px-6 font-bold text-slate-800">{item.id}</td>
-                                  <td className="py-3.5 px-6 font-semibold text-slate-650">{item.name}</td>
-                                  <td className="py-3.5 px-6 text-slate-500 font-medium">{item.location}</td>
-                                  <td className="py-3.5 px-6 text-right font-bold text-slate-700">
-                                    {formatNumber(item.value, 0)} L
-                                  </td>
-                                  <td className="py-3.5 px-6 text-right font-bold text-slate-700">
-                                    {kl.toFixed(2)} kL
-                                  </td>
-                                  <td className="py-3.5 px-6 text-right text-slate-500 font-semibold">
-                                    {getCurrencySymbol(billingCurrency)}{billingRatePerKl.toFixed(2)} / kL
-                                  </td>
-                                  <td className="py-3.5 px-6 text-right font-black text-slate-900 text-sm">
-                                    {getCurrencySymbol(billingCurrency)}{formatNumber(billAmount, 2)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                            
-                            {/* Summary Footer */}
-                            <tr className="bg-slate-50/65 font-black border-t border-slate-200 text-slate-900">
-                              <td colSpan={3} className="py-4 px-6 text-xs uppercase tracking-wider text-slate-500 font-extrabold">
-                                Grand Total
-                              </td>
-                              <td className="py-4 px-6 text-right text-sm">
-                                {formatNumber(totalLitres, 0)} L
-                              </td>
-                              <td className="py-4 px-6 text-right text-sm">
-                                {(totalLitres / 1000).toFixed(2)} kL
-                              </td>
-                              <td className="py-4 px-6 text-right text-slate-400 font-bold">
-                                —
-                              </td>
-                              <td className="py-4 px-6 text-right text-base text-blue-600 font-extrabold">
-                                {getCurrencySymbol(billingCurrency)}{formatNumber((totalLitres / 1000) * billingRatePerKl, 2)}
-                              </td>
-                            </tr>
-                          </>
-                        );
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
 
             </div>
           )}
