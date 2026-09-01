@@ -34,6 +34,17 @@ import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
 import { DatePicker, Calendar as CalendarWidget } from '../components/ui/calendar';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '../components/ui/input-group';
 import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
+import {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+  CommandShortcut,
+} from '../components/ui/command';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -541,6 +552,33 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [deletionNotification, setDeletionNotification] = useState<string | null>(null);
   const [dataRefreshToken, setDataRefreshToken] = useState(0);
+
+  // Command Dialog State & ⌘K Shortcut
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [commandSearch, setCommandSearch] = useState('');
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const filteredCommandDevices = React.useMemo(() => {
+    if (!commandSearch.trim()) return devices;
+    const q = commandSearch.toLowerCase();
+    return devices.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.id.toLowerCase().includes(q) ||
+        d.location.toLowerCase().includes(q) ||
+        d.facility.toLowerCase().includes(q)
+    );
+  }, [devices, commandSearch]);
 
   // Sync states to localStorage
   React.useEffect(() => {
@@ -1714,15 +1752,20 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       {/* Device Selection */}
                       <div className="space-y-2">
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Meter Device</label>
-                        <select
-                          value={compareDevice}
-                          onChange={(e) => setCompareDevice(e.target.value)}
-                          className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
+                        <button
+                          type="button"
+                          onClick={() => setIsCommandOpen(true)}
+                          className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-semibold shadow-sm hover:border-blue-500 transition-all cursor-pointer"
                         >
-                          {devices.map((d) => (
-                            <option key={d.id} value={d.id}>{d.name} — {d.location}</option>
-                          ))}
-                        </select>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Server className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="truncate">{selectedDevObj.name} — {selectedDevObj.location}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 pl-1">
+                            <CommandShortcut className="hidden sm:inline-block">⌘K</CommandShortcut>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                          </div>
+                        </button>
                       </div>
 
                       {/* Period A Selector */}
@@ -1884,6 +1927,63 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
         onClose={() => setIsDeleteDataOpen(false)}
         onDeleted={handleDataDeleted}
       />
+
+      {/* Command Dialog for Selecting Meter Device & Navigation */}
+      <CommandDialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
+        <Command>
+          <CommandInput
+            placeholder="Type a command or search meters..."
+            value={commandSearch}
+            onValueChange={setCommandSearch}
+          />
+          <CommandList>
+            {filteredCommandDevices.length === 0 ? (
+              <CommandEmpty>No matching meter devices found.</CommandEmpty>
+            ) : (
+              <>
+                <CommandGroup heading="Meter Catalog Devices">
+                  {filteredCommandDevices.map((d) => (
+                    <CommandItem
+                      key={d.id}
+                      onSelect={() => {
+                        setCompareDevice(d.id);
+                        onDeviceChange?.(d);
+                        setIsCommandOpen(false);
+                      }}
+                      className={compareDevice === d.id ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : ''}
+                    >
+                      <Server className={`w-4 h-4 shrink-0 ${d.status === 'online' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-bold truncate">{d.name}</span>
+                        <span className="text-[10px] text-slate-400 truncate">{d.location} • {d.facility}</span>
+                      </div>
+                      <CommandShortcut>{d.id}</CommandShortcut>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup heading="Quick Dashboard Navigation">
+                  <CommandItem onSelect={() => { setActiveNav('overview'); setIsCommandOpen(false); }}>
+                    <LayoutDashboard className="w-4 h-4 text-blue-500 shrink-0" />
+                    <span>Overview Dashboard</span>
+                    <CommandShortcut>⌘1</CommandShortcut>
+                  </CommandItem>
+                  <CommandItem onSelect={() => { setActiveNav('devices'); setIsCommandOpen(false); }}>
+                    <Server className="w-4 h-4 text-purple-500 shrink-0" />
+                    <span>Meters Catalog</span>
+                    <CommandShortcut>⌘2</CommandShortcut>
+                  </CommandItem>
+                  <CommandItem onSelect={() => { setActiveNav('compare'); setIsCommandOpen(false); }}>
+                    <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>Comparison Mode</span>
+                    <CommandShortcut>⌘3</CommandShortcut>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </CommandDialog>
     </div>
   );
 };
