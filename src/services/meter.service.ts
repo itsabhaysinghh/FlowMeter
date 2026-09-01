@@ -24,18 +24,26 @@ export class MeterService {
   private cacheTimestamp: number = 0;
   private readonly CACHE_TTL = 10000; // 10 seconds cache TTL
 
+  clearCache() {
+    this.devicesCache = null;
+    this.cacheTimestamp = 0;
+  }
+
   /**
    * Fetches available device list for facility dropdown selection
    */
   async getAvailableDevices(forceRefresh = false): Promise<DeviceOption[] | null> {
     const now = Date.now();
-    if (!forceRefresh && this.devicesCache && (now - this.cacheTimestamp < this.CACHE_TTL)) {
+    if (forceRefresh) {
+      this.clearCache();
+    } else if (this.devicesCache && (now - this.cacheTimestamp < this.CACHE_TTL)) {
       return this.devicesCache;
     }
 
     try {
       const response = await axios.get(`${API_BASE_URL}/v1/devices`, {
-        params: { organization_id: 'ORG_0001' },
+        params: { organization_id: 'ORG_0001', _t: now },
+        headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
         timeout: 5000,
       });
 
@@ -74,10 +82,10 @@ export class MeterService {
   /**
    * Fetches metadata for the specified water meter device
    */
-  async getMeterMetadata(meterId?: string): Promise<MeterMetadata | null> {
+  async getMeterMetadata(meterId?: string, forceRefresh = false): Promise<MeterMetadata | null> {
     if (!meterId) return null;
     try {
-      const devices = await this.getAvailableDevices();
+      const devices = await this.getAvailableDevices(forceRefresh);
       if (!devices) return null;
       const device = devices.find((d) => d.id === meterId);
       if (!device) return null;
@@ -110,7 +118,8 @@ export class MeterService {
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/live`,
         {
-          params: meterId ? { device_id: meterId } : undefined,
+          params: { ...(meterId ? { device_id: meterId } : {}), _t: Date.now() },
+          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
           timeout: 5000,
         }
       );
@@ -157,8 +166,10 @@ export class MeterService {
             device_id: meterId,
             start,
             end,
-            interval
+            interval,
+            _t: Date.now(),
           },
+          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
           timeout: 5000,
         }
       );
@@ -192,7 +203,9 @@ export class MeterService {
             start,
             end,
             interval,
-          }
+            _t: Date.now(),
+          },
+          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
         }
       );
 
@@ -220,7 +233,8 @@ export class MeterService {
       const response = await axios.get(
         `${API_BASE_URL}/v1/flow/history`,
         {
-          params: meterId ? { device_id: meterId, start_time: start, end_time: end, limit: params?.limit ?? 100 } : undefined,
+          params: meterId ? { device_id: meterId, start_time: start, end_time: end, limit: params?.limit ?? 100, _t: Date.now() } : { _t: Date.now() },
+          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
           timeout: 5000,
         }
       );

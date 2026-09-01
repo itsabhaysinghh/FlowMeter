@@ -9,8 +9,11 @@ function sendJson(response, statusCode, body, origin) {
   response.writeHead(statusCode, {
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': origin,
-    'access-control-allow-headers': 'content-type, x-api-key',
+    'access-control-allow-headers': 'content-type, x-api-key, cache-control, pragma',
     'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+    'cache-control': 'no-cache, no-store, must-revalidate, proxy-revalidate',
+    'pragma': 'no-cache',
+    'expires': '0',
   });
   response.end(JSON.stringify(body));
 }

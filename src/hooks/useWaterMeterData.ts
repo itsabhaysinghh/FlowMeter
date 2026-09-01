@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
 import { meterService } from '../services/meter.service';
 import { formatLastSeen } from '../utils/formatters';
@@ -23,6 +23,8 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const fetchIdRef = useRef<number>(0);
+
   const [refreshInterval, setRefreshIntervalState] = useState<number>(() => {
     const saved = sessionStorage.getItem('flostat_refresh_interval');
     return saved ? parseInt(saved, 10) : 60000;
@@ -33,10 +35,12 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     sessionStorage.setItem('flostat_refresh_interval', intervalMs.toString());
   }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     // This token intentionally invalidates the callback after a confirmed delete.
     void dataRefreshToken;
     setApiError(null);
+
+    const currentFetchId = ++fetchIdRef.current;
 
     if (devStateOverride === 'connected' && connectedStreamData) {
       setState('connected');
@@ -61,12 +65,17 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     try {
       const [metadata, metrics, summary, trend, history] =
       await Promise.all([
-          meterService.getMeterMetadata(meterId),
+          meterService.getMeterMetadata(meterId, forceRefresh),
           meterService.getLiveFlowRate(meterId),
           meterService.getConsumption(activeTab, meterId, customDateRange, specificDate, selectedMonth, selectedYear),
           meterService.getFlowTrend(meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
           meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
       ]);
+
+      // Guard against race conditions: ignore response if a newer fetch was started
+      if (currentFetchId !== fetchIdRef.current) {
+        return;
+      }
 
       const effectiveMetrics = metrics || {
         liveFlowRate: 0,
@@ -119,6 +128,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
       setState('connected');
       setLastRefreshed(new Date().toLocaleTimeString());
     } catch (err: any) {
+      if (currentFetchId !== fetchIdRef.current) return;
       console.error('Error fetching water meter data:', err);
       const statusText = err.response ? `HTTP ${err.response.status} (${err.response.statusText || 'Not Found'})` : err.message || 'Connection Error';
       setApiError(`Axios Request Failed: ${statusText}`);
@@ -128,13 +138,13 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
   }, [activeTab, customDateRange, specificDate, selectedMonth, selectedYear, dataRefreshToken, devStateOverride, connectedStreamData, selectedDevice]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   useEffect(() => {
     if (refreshInterval <= 0) return;
     const timer = setInterval(() => {
-      fetchData();
+      fetchData(false);
     }, refreshInterval);
     return () => clearInterval(timer);
   }, [fetchData, refreshInterval]);
@@ -145,8 +155,9 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     lastRefreshed,
     apiError,
     isLiveMode: devStateOverride === undefined,
-    refetch: fetchData,
+    refetch: (force = true) => fetchData(force),
     refreshInterval,
     setRefreshInterval,
   };
 }
+

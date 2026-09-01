@@ -62,13 +62,14 @@ export class FlowService {
   async getReadings(query) {
     const range = parseRange(query);
     const limit = parseLimit(query.limit);
-    const page = await this.repository.getReadingsPage({ ...range, limit, nextToken: query.next_token });
+    const page = await this.repository.getReadingsPage({ ...range, limit, nextToken: query.next_token, scanIndexForward: false });
+    const records = [...page.records].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
     return {
       success: true,
-      records: page.records.map((record) => ({
+      records: records.map((record) => ({
         device_id: record.device_id,
         flow_rate_lpm: record.flow_rate_lpm,
-        timestamp: record.timestamp,
+        timestamp: Number(record.timestamp),
         received_at: record.received_at,
       })),
       next_token: page.nextToken,
@@ -81,19 +82,20 @@ export class FlowService {
     if (!record) throw new HttpError(404, 'No readings found for this device.');
     return {
       success: true,
-      data: { device_id: record.device_id, flow_rate_lpm: record.flow_rate_lpm, timestamp: record.timestamp, received_at: record.received_at },
+      data: { device_id: record.device_id, flow_rate_lpm: record.flow_rate_lpm, timestamp: Number(record.timestamp), received_at: record.received_at },
     };
   }
 
   async getHistory(query) {
     const range = parseRange(query, { defaultStart: epochSeconds() - 24 * 60 * 60, defaultEnd: epochSeconds() });
     const limit = parseLimit(query.limit, 100);
-    const page = await this.repository.getReadingsPage({ ...range, limit, nextToken: query.next_token });
+    const page = await this.repository.getReadingsPage({ ...range, limit, nextToken: query.next_token, scanIndexForward: false });
+    const sorted = [...page.records].sort((left, right) => Number(right.timestamp) - Number(left.timestamp));
     return {
       success: true,
-      records: page.records.reverse().map((record) => ({
+      records: sorted.map((record) => ({
         device_id: record.device_id,
-        timestamp: record.timestamp,
+        timestamp: Number(record.timestamp),
         interval_seconds: 60,
         avg_flow_rate_lpm: record.flow_rate_lpm,
         volume_litres: record.flow_rate_lpm,
@@ -108,7 +110,7 @@ export class FlowService {
     const aggregates = new Map();
     const rollups = await this.repository.getRollups({ ...range, granularity });
 
-    if (rollups) {
+    if (rollups && rollups.length > 0) {
       for (const rollup of rollups) {
         let bucketStartVal = rollup.bucket_start;
         if (bucketStartVal === undefined && typeof rollup.flow_meter_id === 'string') {

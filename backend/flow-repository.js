@@ -38,7 +38,7 @@ export class DynamoFlowRepository {
   }
 
   async putReading(reading) {
-    const timestampVal = String(reading.device_timestamp);
+    const timestampVal = String(reading.device_timestamp).padStart(10, '0');
     const item = {
       ...reading,
       flow_meter_id: reading.device_id,
@@ -135,16 +135,18 @@ export class DynamoFlowRepository {
     }
   }
 
-  async getReadingsPage({ deviceId, startTime, endTime, limit, nextToken }) {
+  async getReadingsPage({ deviceId, startTime, endTime, limit, nextToken, scanIndexForward = true }) {
+    const startStr = String(startTime).padStart(10, '0');
+    const endStr = String(endTime).padStart(10, '0');
     try {
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
         KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#pk': 'flow_meter_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': String(startTime), ':endTime': String(endTime) },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startStr, ':endTime': endStr },
         ExclusiveStartKey: decodeKey(nextToken),
         Limit: limit,
-        ScanIndexForward: true,
+        ScanIndexForward: scanIndexForward,
       }));
       return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
     } catch (err) {
@@ -155,7 +157,7 @@ export class DynamoFlowRepository {
         ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
         ExclusiveStartKey: decodeKey(nextToken),
         Limit: limit,
-        ScanIndexForward: true,
+        ScanIndexForward: scanIndexForward,
       }));
       return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
     }

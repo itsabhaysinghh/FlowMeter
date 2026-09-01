@@ -66,11 +66,20 @@ test('simulated device pipeline stores, fetches, summarizes, and deletes FLOSTAT
       // Verify route aliases work for both /flow and /v1/flow
       const range = `device_id=${deviceId}&start_time=${timestamp}&end_time=${timestamp}`;
       const getResponse = await fetch(`${baseUrl}/flow?${range}`);
+      assert.equal(getResponse.headers.get('cache-control'), 'no-cache, no-store, must-revalidate, proxy-revalidate');
       const getBody = await getResponse.json();
       assert.equal(getResponse.status, 200);
       assert.equal(getBody.records.length, 1);
       assert.equal(getBody.records[0].device_id, deviceId);
       assert.equal(getBody.records[0].flow_rate_lpm, reading.flow_rate_lpm);
+
+      // Verify repeated GET refreshes yield consistent data
+      for (let i = 0; i < 5; i++) {
+        const repeatRes = await fetch(`${baseUrl}/flow/history?${range}`);
+        const repeatBody = await repeatRes.json();
+        assert.equal(repeatBody.records.length, 1);
+        assert.equal(repeatBody.records[0].avg_flow_rate_lpm, reading.flow_rate_lpm);
+      }
 
       const liveResponse = await fetch(`${baseUrl}/flow/live?device_id=${deviceId}`);
       const liveBody = await liveResponse.json();
