@@ -30,6 +30,7 @@ import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
 import { DatePicker, Calendar as CalendarWidget } from '../components/ui/calendar';
+import { InputGroup, InputGroupInput, InputGroupAddon } from '../components/ui/input-group';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -1381,16 +1382,21 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                 <div className="flex flex-wrap items-center gap-3 shrink-0">
                   
                   {/* Search Bar */}
-                  <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
+                  <InputGroup className="w-56 sm:w-72">
+                    <InputGroupAddon>
+                      <Search className="w-4 h-4 text-slate-400" />
+                    </InputGroupAddon>
+                    <InputGroupInput
                       placeholder="Search ID or Location..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 pr-4 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-dark-card text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/25 w-48 sm:w-56 transition-all"
                     />
-                  </div>
+                    {filteredAndSortedDevices.length > 0 && (
+                      <InputGroupAddon align="inline-end" className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                        {filteredAndSortedDevices.length} results
+                      </InputGroupAddon>
+                    )}
+                  </InputGroup>
 
                   {/* Export Dropdown */}
                   <div className="relative">

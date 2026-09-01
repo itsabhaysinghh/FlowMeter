@@ -3,6 +3,7 @@ import { Search, ArrowUpDown, ChevronLeft, ChevronRight, AlertCircle } from 'luc
 import type { FlowHistoryRecord } from '../../types/meter.types';
 import { StatusBadge } from '../common/StatusBadge';
 import { formatVolume, formatFlowRate } from '../../utils/formatters';
+import { InputGroup, InputGroupInput, InputGroupAddon } from '../ui/input-group';
 
 interface FlowHistoryTableProps {
   data?: FlowHistoryRecord[] | null;
@@ -99,19 +100,24 @@ export const FlowHistoryTable: React.FC<FlowHistoryTableProps> = ({ data }) => {
 
         {/* Search Input */}
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
+          <InputGroup className="w-full sm:w-64">
+            <InputGroupAddon>
+              <Search className="w-4 h-4 text-slate-400" />
+            </InputGroupAddon>
+            <InputGroupInput
               placeholder="Search logs..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-flostat-secondary/30 focus:border-flostat-secondary w-full sm:w-64 transition-all"
             />
-          </div>
+            {filteredData.length > 0 && (
+              <InputGroupAddon align="inline-end" className="text-[10px] font-bold text-slate-500">
+                {filteredData.length} logs
+              </InputGroupAddon>
+            )}
+          </InputGroup>
         </div>
       </div>
 
