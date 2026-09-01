@@ -15,6 +15,8 @@ import {
   Clock,
   Zap,
   Trash2,
+  CheckCircle2,
+  Info,
 } from 'lucide-react';
 import { PieChart, PieSlice, PieCenter, Legend, type PieData } from '../components/ui/PieChart';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult } from '../types/meter.types';
@@ -31,6 +33,7 @@ import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
 import { DatePicker, Calendar as CalendarWidget } from '../components/ui/calendar';
 import { InputGroup, InputGroupInput, InputGroupAddon } from '../components/ui/input-group';
+import { Alert, AlertTitle, AlertDescription } from '../components/ui/alert';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -1091,6 +1094,32 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
             </div>
           )}
         </div>
+      </div>
+
+      {/* Dynamic Dashboard Alerts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Alert variant="info">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div>
+            <AlertTitle>New update available</AlertTitle>
+            <AlertDescription>
+              A new update has been pushed to GitHub.
+              <br />
+              <strong>Latest update:</strong> Data consistency, Shadcn calendar & input-group search features.
+            </AlertDescription>
+          </div>
+        </Alert>
+
+        <Alert variant="default">
+          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div>
+            <AlertTitle>Meter status</AlertTitle>
+            <AlertDescription>
+              <strong>{devices.filter(d => d.status === 'online').length}</strong> meters are currently active out of{" "}
+              <strong>{devices.length}</strong> total meters.
+            </AlertDescription>
+          </div>
+        </Alert>
       </div>
 
       {deletionNotification && (
