@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, Check, X } from 'lucide-react';
+import { DatePicker } from '../ui/calendar';
 import type { TimeRangeTab, DateRange } from '../../types/meter.types';
 
 interface ChartCardProps {
@@ -133,15 +134,11 @@ export const ChartCard: React.FC<ChartCardProps> = ({
 
           {/* Active Specific Date Selector Trigger */}
           {activeTab === 'specific' && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 text-xs font-semibold shadow-xs">
-              <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <input
-                type="date"
-                value={specificDate}
-                onChange={(e) => onSpecificDateChange?.(e.target.value)}
-                className="bg-transparent text-slate-800 dark:text-slate-200 font-bold text-xs focus:outline-none cursor-pointer"
-              />
-            </div>
+            <DatePicker
+              value={specificDate}
+              onChange={(d) => onSpecificDateChange?.(d)}
+              className="w-44"
+            />
           )}
 
           {/* Active Custom Date Range Badge Trigger */}
@@ -210,22 +207,18 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                   <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     START DATE
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-xs"
+                    onChange={setStartDate}
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
                     END DATE
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-xs"
+                    onChange={setEndDate}
                   />
                 </div>
               </div>

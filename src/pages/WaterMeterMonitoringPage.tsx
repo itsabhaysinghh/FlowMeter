@@ -1634,20 +1634,16 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       <div className="space-y-2">
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reference Period (A)</label>
                         {compareActiveTab === 'today' && (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={compareDayA}
-                            onChange={(e) => setCompareDayA(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
+                            onChange={setCompareDayA}
                           />
                         )}
                         {compareActiveTab === 'week' && (
                           <div className="space-y-1">
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareWeekA}
-                              onChange={(e) => setCompareWeekA(e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
+                              onChange={setCompareWeekA}
                             />
                             <p className="text-[9px] text-slate-400">Week containing selected date</p>
                           </div>
@@ -1673,17 +1669,13 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                         )}
                         {compareActiveTab === 'custom' && (
                           <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareCustomStartA}
-                              onChange={(e) => setCompareCustomStartA(e.target.value)}
-                              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-850 text-[11px] font-semibold focus:outline-none w-full"
+                              onChange={setCompareCustomStartA}
                             />
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareCustomEndA}
-                              onChange={(e) => setCompareCustomEndA(e.target.value)}
-                              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-850 text-[11px] font-semibold focus:outline-none w-full"
+                              onChange={setCompareCustomEndA}
                             />
                           </div>
                         )}
@@ -1693,20 +1685,16 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       <div className="space-y-2">
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Comparison Period (B)</label>
                         {compareActiveTab === 'today' && (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={compareDayB}
-                            onChange={(e) => setCompareDayB(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
+                            onChange={setCompareDayB}
                           />
                         )}
                         {compareActiveTab === 'week' && (
                           <div className="space-y-1">
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareWeekB}
-                              onChange={(e) => setCompareWeekB(e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
+                              onChange={setCompareWeekB}
                             />
                             <p className="text-[9px] text-slate-400">Week containing selected date</p>
                           </div>
@@ -1732,17 +1720,13 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                         )}
                         {compareActiveTab === 'custom' && (
                           <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareCustomStartB}
-                              onChange={(e) => setCompareCustomStartB(e.target.value)}
-                              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-850 text-[11px] font-semibold focus:outline-none w-full"
+                              onChange={setCompareCustomStartB}
                             />
-                            <input
-                              type="date"
+                            <DatePicker
                               value={compareCustomEndB}
-                              onChange={(e) => setCompareCustomEndB(e.target.value)}
-                              className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-850 text-[11px] font-semibold focus:outline-none w-full"
+                              onChange={setCompareCustomEndB}
                             />
                           </div>
                         )}
