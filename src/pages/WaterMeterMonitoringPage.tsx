@@ -553,6 +553,10 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   const [deletionNotification, setDeletionNotification] = useState<string | null>(null);
   const [dataRefreshToken, setDataRefreshToken] = useState(0);
 
+  // Alert Cards Dismiss State
+  const [showUpdateAlert, setShowUpdateAlert] = useState<boolean>(() => localStorage.getItem('flostat_update_alert_dismissed') !== 'true');
+  const [showMeterStatusAlert, setShowMeterStatusAlert] = useState<boolean>(() => localStorage.getItem('flostat_meter_status_alert_dismissed') !== 'true');
+
   // Command Dialog State & ⌘K Shortcut
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [commandSearch, setCommandSearch] = useState('');
@@ -1135,30 +1139,48 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
       </div>
 
       {/* Dynamic Dashboard Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Alert variant="info">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-          <div>
-            <AlertTitle>New update available</AlertTitle>
-            <AlertDescription>
-              A new update has been pushed to GitHub.
-              <br />
-              <strong>Latest update:</strong> Data consistency, Shadcn calendar & input-group search features.
-            </AlertDescription>
-          </div>
-        </Alert>
+      {(showUpdateAlert || showMeterStatusAlert) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {showUpdateAlert && (
+            <Alert
+              variant="info"
+              onClose={() => {
+                setShowUpdateAlert(false);
+                localStorage.setItem('flostat_update_alert_dismissed', 'true');
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <AlertTitle>New update available</AlertTitle>
+                <AlertDescription>
+                  A new update has been pushed to GitHub.
+                  <br />
+                  <strong>Latest update:</strong> Data consistency, Shadcn calendar & input-group search features.
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
 
-        <Alert variant="default">
-          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-          <div>
-            <AlertTitle>Meter status</AlertTitle>
-            <AlertDescription>
-              <strong>{devices.filter(d => d.status === 'online').length}</strong> meters are currently active out of{" "}
-              <strong>{devices.length}</strong> total meters.
-            </AlertDescription>
-          </div>
-        </Alert>
-      </div>
+          {showMeterStatusAlert && (
+            <Alert
+              variant="default"
+              onClose={() => {
+                setShowMeterStatusAlert(false);
+                localStorage.setItem('flostat_meter_status_alert_dismissed', 'true');
+              }}
+            >
+              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <AlertTitle>Meter status</AlertTitle>
+                <AlertDescription>
+                  <strong>{devices.filter(d => d.status === 'online').length}</strong> meters are currently active out of{" "}
+                  <strong>{devices.length}</strong> total meters.
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
+        </div>
+      )}
 
       {deletionNotification && (
         <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-300">

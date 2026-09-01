@@ -1,14 +1,17 @@
 import React from 'react';
+import { X } from 'lucide-react';
 
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'destructive' | 'info' | 'success';
   className?: string;
+  onClose?: () => void;
   children: React.ReactNode;
 }
 
 export function Alert({
   variant = 'default',
   className = '',
+  onClose,
   children,
   ...props
 }: AlertProps) {
@@ -25,10 +28,23 @@ export function Alert({
   return (
     <div
       role="alert"
-      className={`relative w-full rounded-2xl border p-4 shadow-sm flex items-start gap-3.5 text-xs transition-all ${variantStyles} ${className}`}
+      className={`relative w-full rounded-2xl border p-4 shadow-sm flex items-start justify-between gap-3.5 text-xs transition-all ${variantStyles} ${className}`}
       {...props}
     >
-      {children}
+      <div className="flex items-start gap-3.5 flex-1 min-w-0">
+        {children}
+      </div>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
+          title="Dismiss alert"
+          aria-label="Dismiss alert"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
