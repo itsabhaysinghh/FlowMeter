@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, Check, X } from 'lucide-react';
-import { DatePicker } from '../ui/calendar';
+import { DatePicker, Calendar as CalendarWidget } from '../ui/calendar';
 import type { TimeRangeTab, DateRange } from '../../types/meter.types';
 
 interface ChartCardProps {
@@ -46,10 +46,16 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   const [endDate, setEndDate] = useState(customDateRange.endDate);
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  const [isSpecificPopoverOpen, setIsSpecificPopoverOpen] = useState(false);
+  const specificPopoverRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsDatePickerOpen(false);
+      }
+      if (specificPopoverRef.current && !specificPopoverRef.current.contains(event.target as Node)) {
+        setIsSpecificPopoverOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -60,8 +66,13 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     onTabChange?.(tabId);
     if (tabId === 'custom') {
       setIsDatePickerOpen(true);
+      setIsSpecificPopoverOpen(false);
+    } else if (tabId === 'specific') {
+      setIsSpecificPopoverOpen(true);
+      setIsDatePickerOpen(false);
     } else {
       setIsDatePickerOpen(false);
+      setIsSpecificPopoverOpen(false);
     }
   };
 
@@ -116,29 +127,69 @@ export const ChartCard: React.FC<ChartCardProps> = ({
         <div className="flex items-center gap-2 relative">
           {showTabs && onTabChange && (
             <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/60 shadow-inner">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab.id)}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-slate-700'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
+              {TABS.map((tab) => {
+                if (tab.id === 'specific') {
+                  const formattedDate = specificDate
+                    ? new Date(specificDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '';
 
-          {/* Active Specific Date Selector Trigger */}
-          {activeTab === 'specific' && (
-            <DatePicker
-              value={specificDate}
-              onChange={(d) => onSpecificDateChange?.(d)}
-              className="w-44"
-            />
+                  return (
+                    <div className="relative inline-block" key={tab.id} ref={specificPopoverRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeTab !== 'specific') {
+                            handleTabClick('specific');
+                          } else {
+                            setIsSpecificPopoverOpen((prev) => !prev);
+                          }
+                        }}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer flex items-center gap-1.5 ${
+                          activeTab === 'specific'
+                            ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-slate-700'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <span>{activeTab === 'specific' && formattedDate ? `Specific Date (${formattedDate})` : 'Specific Date'}</span>
+                        {activeTab === 'specific' && (
+                          <ChevronDown className={`w-3 h-3 transition-transform ${isSpecificPopoverOpen ? 'rotate-180' : ''}`} />
+                        )}
+                      </button>
+
+                      {isSpecificPopoverOpen && activeTab === 'specific' && (
+                        <div className="absolute left-0 top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                          <CalendarWidget
+                            captionLayout="dropdown"
+                            selected={specificDate}
+                            onSelect={(date: Date) => {
+                              const yyyy = date.getFullYear();
+                              const mm = String(date.getMonth() + 1).padStart(2, '0');
+                              const dd = String(date.getDate()).padStart(2, '0');
+                              onSpecificDateChange?.(`${yyyy}-${mm}-${dd}`);
+                              setIsSpecificPopoverOpen(false);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer ${
+                      activeTab === tab.id
+                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-slate-700'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           )}
 
           {/* Active Custom Date Range Badge Trigger */}

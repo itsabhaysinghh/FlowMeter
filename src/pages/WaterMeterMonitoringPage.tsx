@@ -29,7 +29,7 @@ import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
-import { DatePicker } from '../components/ui/calendar';
+import { DatePicker, Calendar as CalendarWidget } from '../components/ui/calendar';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -297,12 +297,34 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const [isSpecificPopoverOpen, setIsSpecificPopoverOpen] = useState(false);
+  const specificPopoverRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (specificPopoverRef.current && !specificPopoverRef.current.contains(e.target as Node)) {
+        setIsSpecificPopoverOpen(false);
+      }
+    };
+    if (isSpecificPopoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSpecificPopoverOpen]);
+
   const handleTabClick = (tabId: TimeRangeTab) => {
     setActiveTab(tabId);
     if (tabId === 'custom') {
       setIsDatePickerOpen(true);
+      setIsSpecificPopoverOpen(false);
+    } else if (tabId === 'specific') {
+      setIsSpecificPopoverOpen(true);
+      setIsDatePickerOpen(false);
     } else {
       setIsDatePickerOpen(false);
+      setIsSpecificPopoverOpen(false);
     }
   };
 
@@ -310,31 +332,69 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
     <div className="flex flex-wrap items-center gap-2">
       {/* Tab Segment Controls */}
       <div className="flex items-center p-1 bg-slate-100/85 dark:bg-slate-800/85 rounded-lg border border-slate-200 dark:border-slate-700">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id)}
-            className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        {TABS.map((tab) => {
+          if (tab.id === 'specific') {
+            const formattedDate = specificDate
+              ? new Date(specificDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '';
 
-      {/* Specific Date Picker */}
-      {activeTab === 'specific' && (
-        <div className="flex items-center gap-2">
-          <DatePicker
-            value={specificDate}
-            onChange={(d) => setSpecificDate(d)}
-            className="w-44"
-          />
-        </div>
-      )}
+            return (
+              <div className="relative inline-block" key={tab.id} ref={specificPopoverRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeTab !== 'specific') {
+                      handleTabClick('specific');
+                    } else {
+                      setIsSpecificPopoverOpen((prev) => !prev);
+                    }
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'specific'
+                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+                  }`}
+                >
+                  <span>{activeTab === 'specific' && formattedDate ? `Specific Date (${formattedDate})` : 'Specific Date'}</span>
+                  {activeTab === 'specific' && (
+                    <ChevronDown className={`w-3 h-3 transition-transform ${isSpecificPopoverOpen ? 'rotate-180' : ''}`} />
+                  )}
+                </button>
+
+                {isSpecificPopoverOpen && activeTab === 'specific' && (
+                  <div className="absolute left-0 top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <CalendarWidget
+                      captionLayout="dropdown"
+                      selected={specificDate}
+                      onSelect={(date: Date) => {
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, '0');
+                        const dd = String(date.getDate()).padStart(2, '0');
+                        setSpecificDate(`${yyyy}-${mm}-${dd}`);
+                        setIsSpecificPopoverOpen(false);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Month Picker */}
       {activeTab === 'month' && (
