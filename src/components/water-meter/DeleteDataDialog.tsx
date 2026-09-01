@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronDown, LoaderCircle, Trash2, X } from 'lucide-react';
+import { DatePicker } from '../ui/calendar';
 import type {
   DeleteDataMode,
   DeleteFlowMeterDataResult,
@@ -300,16 +301,7 @@ export function DeleteDataDialog({
 
 function DateField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{label}</label>
-      <input
-        id={id}
-        type="date"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-      />
-    </div>
+    <DatePicker id={id} label={label} value={value} onChange={onChange} />
   );
 }
 

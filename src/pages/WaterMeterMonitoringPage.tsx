@@ -29,6 +29,7 @@ import { formatNumber } from '../utils/formatters';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
+import { DatePicker } from '../components/ui/calendar';
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -326,14 +327,11 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
 
       {/* Specific Date Picker */}
       {activeTab === 'specific' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Date:</span>
-          <input
-            type="date"
+        <div className="flex items-center gap-2">
+          <DatePicker
             value={specificDate}
-            onChange={(e) => setSpecificDate(e.target.value)}
-            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
+            onChange={(d) => setSpecificDate(d)}
+            className="w-44"
           />
         </div>
       )}
@@ -392,20 +390,16 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Start Date</label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                      onChange={setStartDate}
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">End Date</label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none"
+                      onChange={setEndDate}
                     />
                   </div>
                 </div>
