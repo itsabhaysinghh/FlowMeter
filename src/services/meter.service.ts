@@ -23,6 +23,68 @@ export class MeterService {
   private devicesCache: DeviceOption[] | null = null;
   private cacheTimestamp: number = 0;
   private readonly CACHE_TTL = 10000; // 10 seconds cache TTL
+  private inFlightRequests = new Map<string, Promise<any>>();
+
+  /**
+   * Safe GET request executor with in-flight deduplication and exponential backoff retry
+   * for transient 503/502/504/network throttling errors.
+   */
+  private async safeGet<T>(url: string, params?: Record<string, any>, timeout = 8000, maxRetries = 2): Promise<T | null> {
+    const sortedParams = params
+      ? Object.keys(params)
+          .sort()
+          .filter((k) => params[k] !== undefined && params[k] !== null)
+          .map((k) => `${k}=${encodeURIComponent(params[k])}`)
+          .join('&')
+      : '';
+    const requestKey = `${url}?${sortedParams}`;
+
+    // Deduplicate simultaneous identical in-flight requests
+    if (this.inFlightRequests.has(requestKey)) {
+      return this.inFlightRequests.get(requestKey) as Promise<T | null>;
+    }
+
+    const executeRequest = async (): Promise<T | null> => {
+      let attempt = 0;
+      while (attempt <= maxRetries) {
+        try {
+          const response = await axios.get(url, { params, timeout });
+          return response.data;
+        } catch (err: any) {
+          attempt++;
+          const status = err.response?.status;
+          const isTransient =
+            status === 503 ||
+            status === 502 ||
+            status === 504 ||
+            status === 429 ||
+            !err.response ||
+            err.code === 'ECONNABORTED' ||
+            err.code === 'ERR_NETWORK';
+
+          if (isTransient && attempt <= maxRetries) {
+            const backoffMs = attempt * 250 + Math.floor(Math.random() * 100);
+            console.warn(
+              `[meterService] Transient error (HTTP ${status || err.code || 'Network'}) on ${url}. Retrying attempt ${attempt}/${maxRetries} in ${backoffMs}ms...`
+            );
+            await new Promise((res) => setTimeout(res, backoffMs));
+            continue;
+          }
+
+          console.error(`[meterService] Request failed for ${url}:`, err.message);
+          return null;
+        }
+      }
+      return null;
+    };
+
+    const promise = executeRequest().finally(() => {
+      this.inFlightRequests.delete(requestKey);
+    });
+
+    this.inFlightRequests.set(requestKey, promise);
+    return promise;
+  }
 
   clearCache() {
     this.devicesCache = null;
@@ -41,15 +103,10 @@ export class MeterService {
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/v1/devices`, {
-        params: { organization_id: 'ORG_0001', _t: now },
-        headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-        timeout: 5000,
-      });
+      const data: any = await this.safeGet(`${API_BASE_URL}/v1/devices`, { organization_id: 'ORG_0001' });
 
-      const data = response.data;
       if (!data || !data.success || !Array.isArray(data.devices)) {
-        return null;
+        return this.devicesCache || null;
       }
 
       const devices: DeviceOption[] = data.devices.map((device: any) => {
@@ -75,7 +132,7 @@ export class MeterService {
       return devices;
     } catch (error) {
       console.error('Error fetching devices from AWS API:', error);
-      return null;
+      return this.devicesCache || null;
     }
   }
 
@@ -115,16 +172,12 @@ export class MeterService {
     meterId?: string
   ): Promise<LiveFlowMetrics | null> {
     try {
-      const response = await axios.get(
+      const data: any = await this.safeGet(
         `${API_BASE_URL}/v1/flow/live`,
-        {
-          params: { ...(meterId ? { device_id: meterId } : {}), _t: Date.now() },
-          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-          timeout: 5000,
-        }
+        meterId ? { device_id: meterId } : undefined
       );
 
-      const record = response.data?.data;
+      const record = data?.data;
 
       if (!record) {
         return null;
@@ -159,21 +212,16 @@ export class MeterService {
     try {
       const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
 
-      const response = await axios.get(
+      const data: any = await this.safeGet(
         `${API_BASE_URL}/v1/flow/summary`,
         {
-          params: {
-            device_id: meterId,
-            start,
-            end,
-            interval,
-            _t: Date.now(),
-          },
-          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-          timeout: 5000,
+          device_id: meterId,
+          start,
+          end,
+          interval
         }
       );
-      return response.data?.data?? null;
+      return data?.data ?? null;
     } catch (err) {
       console.error(err);
       return null;
@@ -181,7 +229,8 @@ export class MeterService {
   }
 
   /**
-   * Fetches 1-minute interval flow rate trend data points for smooth line visualization
+   * Fetches 1-minute interval flow rate trend data points for smooth line visualization.
+   * Reuses the deduplicated /v1/flow/summary query to prevent duplicate network roundtrips.
    */
   async getFlowTrend(
     meterId?: string,
@@ -191,25 +240,9 @@ export class MeterService {
     selectedMonth?: string,
     selectedYear?: string,
   ): Promise<FlowTrendDataPoint[] | null> {
-
     try {
-      const { start, end, interval } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
-
-      const response = await axios.get(
-        `${API_BASE_URL}/v1/flow/summary`,
-        {
-          params:{
-            device_id: meterId,
-            start,
-            end,
-            interval,
-            _t: Date.now(),
-          },
-          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-        }
-      );
-
-      return response.data.data.flow_trend_chart ?? [];
+      const summary = await this.getConsumption(period, meterId, customDateRange, specificDate, selectedMonth, selectedYear);
+      return summary?.flow_trend_chart ?? [];
     } catch(err){
       console.error(err);
       return null;
@@ -230,16 +263,17 @@ export class MeterService {
   ): Promise<FlowHistoryRecord[] | null> {
     try {
       const { start, end } = getIstPeriodRange(period, customDateRange, specificDate, selectedMonth, selectedYear);
-      const response = await axios.get(
+      const data: any = await this.safeGet(
         `${API_BASE_URL}/v1/flow/history`,
         {
-          params: meterId ? { device_id: meterId, start_time: start, end_time: end, limit: params?.limit ?? 100, _t: Date.now() } : { _t: Date.now() },
-          headers: { 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' },
-          timeout: 5000,
+          ...(meterId ? { device_id: meterId } : {}),
+          start_time: start,
+          end_time: end,
+          limit: params?.limit ?? 100,
         }
       );
 
-      const records = response.data?.records || [];
+      const records = data?.records || [];
       return records.map((record: any): FlowHistoryRecord => ({
         id: `${record.device_id}-${record.timestamp}`,
         time: new Date(record.timestamp * 1000).toLocaleString(),

@@ -141,7 +141,7 @@ export function getIstPeriodRange(
   const today = getIstDateInputValue(now);
   let startDate = today;
   let endDate = today;
-  let end = Math.floor(now.getTime() / 1000);
+  let end = istDateTimeToEpochSeconds(endDate, '23:59', 59) ?? Math.floor(now.getTime() / 1000);
   let interval: 'hour' | 'day' | 'month' = 'hour';
 
   if (period === 'week') {

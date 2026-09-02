@@ -22,6 +22,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
   const [data, setData] = useState<WaterMeterDataResponse | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
   const [apiError, setApiError] = useState<string | null>(null);
+  const fetchSeq = useRef(0);
 
   const fetchIdRef = useRef<number>(0);
 
@@ -39,6 +40,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     // This token intentionally invalidates the callback after a confirmed delete.
     void dataRefreshToken;
     setApiError(null);
+    const currentSeq = ++fetchSeq.current;
 
     const currentFetchId = ++fetchIdRef.current;
 
@@ -63,77 +65,95 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     const meterId = selectedDevice.id;
 
     try {
-      const [metadata, metrics, summary, trend, history] =
+      const [metadata, metrics, summary, history] =
       await Promise.all([
           meterService.getMeterMetadata(meterId, forceRefresh),
           meterService.getLiveFlowRate(meterId),
           meterService.getConsumption(activeTab, meterId, customDateRange, specificDate, selectedMonth, selectedYear),
-          meterService.getFlowTrend(meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
           meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
       ]);
 
       // Guard against race conditions: ignore response if a newer fetch was started
-      if (currentFetchId !== fetchIdRef.current) {
+      if (currentFetchId !== fetchIdRef.current) return;
+      if (currentSeq !== fetchSeq.current) return;
+
+      // If all critical endpoints failed and we have no existing data, enter empty state
+      if (!metadata && !metrics && !summary && !history) {
+        setData((prev) => {
+          if (!prev) {
+            setState('empty');
+          }
+          return prev;
+        });
+        setApiError('Unable to connect to backend telemetry service. Retrying in background...');
         return;
       }
 
-      const effectiveMetrics = metrics || {
-        liveFlowRate: 0,
-        todaysConsumption: 0,
-        averageFlowRate: 0,
-        connectionStatus: 'Connected',
-      };
-      const effectiveSummary = summary || {
-        total_volume_litres: 0,
-        average_flow_rate_lpm: 0,
-        minimum_flow_rate_lpm: 0,
-        maximum_flow_rate_lpm: 0,
-        consumption_chart: [],
-        flow_trend_chart: [],
-      };
-      const effectiveHistory = history || [];
-      const effectiveTrend = (trend && trend.length > 0) ? trend : (summary?.flow_trend_chart || []);
+      setData((prev) => {
+        const effectiveMetrics = metrics || prev?.metrics || {
+          liveFlowRate: 0,
+          todaysConsumption: 0,
+          averageFlowRate: 0,
+          connectionStatus: 'Connected',
+        };
 
-      const calcConsumption = (summary && summary.total_volume_litres > 0)
-        ? summary.total_volume_litres
-        : (history && history.length > 0)
-        ? history.reduce((sum, item) => sum + item.totalLitres, 0)
-        : 0;
+        const effectiveSummary = summary || {
+          total_volume_litres: prev?.metrics.todaysConsumption ?? 0,
+          average_flow_rate_lpm: prev?.metrics.averageFlowRate ?? 0,
+          minimum_flow_rate_lpm: 0,
+          maximum_flow_rate_lpm: 0,
+          consumption_chart: prev?.consumptionTrend ?? [],
+          flow_trend_chart: prev?.flowTrend ?? [],
+        };
 
-      setData({
-        metadata: metadata || {
-          meterId: selectedDevice.id,
-          facilityName: selectedDevice.facility,
-          meterName: selectedDevice.name,
-          deviceStatus: selectedDevice.status,
-          lastUpdated: selectedDevice.lastSeen ? formatLastSeen(selectedDevice.lastSeen) : 'Just now (1 sec ago)',
-          currentDate: new Date().toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }),
-        },
-        metrics: {
-          ...effectiveMetrics,
-          todaysConsumption: calcConsumption,
-          averageFlowRate:
-            effectiveHistory.length > 0
-              ? effectiveHistory.reduce((sum, item) => sum + item.flowRate, 0) / effectiveHistory.length
-              : effectiveMetrics.averageFlowRate,
-        },
-        consumptionTrend: effectiveSummary.consumption_chart || [],
-        flowTrend: effectiveSummary.flow_trend_chart || effectiveTrend || [],
-        history: effectiveHistory,
+        const effectiveHistory = history || prev?.history || [];
+        const effectiveTrend = summary?.flow_trend_chart || prev?.flowTrend || [];
+
+        const calcConsumption = (summary && summary.total_volume_litres > 0)
+          ? summary.total_volume_litres
+          : (history && history.length > 0)
+          ? history.reduce((sum, item) => sum + item.totalLitres, 0)
+          : (prev?.metrics.todaysConsumption ?? 0);
+
+        return {
+          metadata: metadata || prev?.metadata || {
+            meterId: selectedDevice.id,
+            facilityName: selectedDevice.facility,
+            meterName: selectedDevice.name,
+            deviceStatus: selectedDevice.status,
+            lastUpdated: selectedDevice.lastSeen ? formatLastSeen(selectedDevice.lastSeen) : 'Just now (1 sec ago)',
+            currentDate: new Date().toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            }),
+          },
+          metrics: {
+            ...effectiveMetrics,
+            todaysConsumption: calcConsumption,
+            averageFlowRate:
+              effectiveHistory.length > 0
+                ? effectiveHistory.reduce((sum, item) => sum + item.flowRate, 0) / effectiveHistory.length
+                : effectiveMetrics.averageFlowRate,
+          },
+          consumptionTrend: effectiveSummary.consumption_chart || prev?.consumptionTrend || [],
+          flowTrend: effectiveTrend,
+          history: effectiveHistory,
+        };
       });
+
       setState('connected');
       setLastRefreshed(new Date().toLocaleTimeString());
     } catch (err: any) {
       if (currentFetchId !== fetchIdRef.current) return;
+      if (currentSeq !== fetchSeq.current) return;
       console.error('Error fetching water meter data:', err);
       const statusText = err.response ? `HTTP ${err.response.status} (${err.response.statusText || 'Not Found'})` : err.message || 'Connection Error';
       setApiError(`Axios Request Failed: ${statusText}`);
-      setState('empty');
-      setData(null);
+      setData((prev) => {
+        if (!prev) setState('empty');
+        return prev;
+      });
     }
   }, [activeTab, customDateRange, specificDate, selectedMonth, selectedYear, dataRefreshToken, devStateOverride, connectedStreamData, selectedDevice]);
 

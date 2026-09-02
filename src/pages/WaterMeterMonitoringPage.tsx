@@ -19,7 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 import { PieChart, PieSlice, PieCenter, Legend, type PieData } from '../components/ui/PieChart';
-import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult } from '../types/meter.types';
+import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult, SummaryResponse, LiveFlowMetrics } from '../types/meter.types';
 import { useWaterMeterData } from '../hooks/useWaterMeterData';
 import { meterService } from '../services/meter.service';
 import { MetricCard } from '../components/common/MetricCard';
@@ -719,36 +719,69 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   });
 
   const [deviceSnapshots, setDeviceSnapshots] = useState<Record<string, { consumption: number; flowRate: number }>>({});
+  const snapshotSeqRef = React.useRef(0);
 
   React.useEffect(() => {
     let active = true;
+    const currentSeq = ++snapshotSeqRef.current;
+
     async function loadDeviceSnapshots() {
-      const snapshots = await Promise.all(devices.map(async (device) => {
-        const [summary, live, history] = await Promise.all([
-          meterService.getConsumption(activeTab, device.id, customDateRange, specificDate, selectedMonth, selectedYear),
-          meterService.getLiveFlowRate(device.id),
-          meterService.getFlowHistory(undefined, device.id, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
-        ]);
+      // Filter out FLOSTAT_001 since its live telemetry and consumption are already managed by the page-level useWaterMeterData hook
+      const nonPrimaryDevices = devices.filter((d) => d.id !== 'FLOSTAT_001');
+      const results: Array<readonly [string, SummaryResponse | null, LiveFlowMetrics | null]> = [];
+      const concurrency = 2;
 
-        const calcConsumption = (summary && summary.total_volume_litres > 0)
-          ? summary.total_volume_litres
-          : (history && history.length > 0)
-          ? history.reduce((sum, item) => sum + item.totalLitres, 0)
-          : 0;
+      // Process devices in controlled chunks of 2 to avoid burst-throttling API Gateway
+      for (let i = 0; i < nonPrimaryDevices.length; i += concurrency) {
+        if (!active || currentSeq !== snapshotSeqRef.current) break;
+        const chunk = nonPrimaryDevices.slice(i, i + concurrency);
+        const chunkResults = await Promise.all(
+          chunk.map(async (device) => {
+            const isOffline = device.status === 'offline';
+            const [summary, live] = await Promise.all([
+              meterService.getConsumption(activeTab, device.id, customDateRange, specificDate, selectedMonth, selectedYear),
+              isOffline
+                ? Promise.resolve({ liveFlowRate: 0, todaysConsumption: 0, averageFlowRate: 0, connectionStatus: 'Disconnected' as const })
+                : meterService.getLiveFlowRate(device.id),
+            ]);
 
-        const calcFlowRate = (live && live.liveFlowRate > 0)
-          ? live.liveFlowRate
-          : 0;
+            return [device.id, summary, live] as const;
+          })
+        );
+        results.push(...chunkResults);
+      }
 
-        return [device.id, {
-          consumption: calcConsumption,
-          flowRate: calcFlowRate,
-        }] as const;
-      }));
-      if (active) setDeviceSnapshots(Object.fromEntries(snapshots));
+      if (active && currentSeq === snapshotSeqRef.current) {
+        setDeviceSnapshots((prev) => {
+          const next = { ...prev };
+
+          for (const [deviceId, summary, live] of results) {
+            const prevSnapshot = prev[deviceId];
+            const summaryFailed = summary === null;
+            const liveFailed = live === null;
+
+            // If the query failed, preserve the previous valid snapshot rather than converting to 0
+            const consumption = !summaryFailed
+              ? (summary?.total_volume_litres ?? 0)
+              : (prevSnapshot?.consumption ?? 0);
+
+            const flowRate = !liveFailed
+              ? (live?.liveFlowRate ?? 0)
+              : (prevSnapshot?.flowRate ?? 0);
+
+            // Only update if we received a response or already have a valid record
+            if (!summaryFailed || !liveFailed || prevSnapshot) {
+              next[deviceId] = { consumption, flowRate };
+            }
+          }
+          return next;
+        });
+      }
     }
     void loadDeviceSnapshots();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [activeTab, customDateRange, dataRefreshToken, devices, specificDate, selectedMonth, selectedYear]);
 
   const getDeviceConsumption = React.useCallback((deviceId: string) => {
