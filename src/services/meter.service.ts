@@ -10,9 +10,26 @@ import type {
   DeviceStatus,
   DeleteFlowMeterDataRequest,
   DeleteFlowMeterDataResult,
+  HistoricalTimeRangeFilter,
+  TimeRangeAnalysisSummary,
+  DrillDownState,
+  DrillDownSummary,
+  DrillDownDataPoint,
 } from '../types/meter.types';
 import { formatLastSeen } from '../utils/formatters';
-import { getIstPeriodRange } from '../utils/ist';
+import { 
+  getIstPeriodRange, 
+  createHistoricalTimeRangeRequest, 
+  formatIstFullDateTime,
+  getIstYearRange,
+  getIstMonthRange,
+  getIstDayRange,
+  getIstHourRange,
+  formatIstMonthYear,
+  formatIstDayLabel,
+  formatIstHourLabel,
+  formatIstTimeOnly,
+} from '../utils/ist';
 
 // Retrieve base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://wbeuxrg5l0.execute-api.ap-south-1.amazonaws.com';
@@ -361,6 +378,629 @@ export class MeterService {
   }
 
   /**
+   * Fetches unaggregated 1-minute historical flow records and computes statistical metrics
+   * for a precise time window in IST from DynamoDB via /v1/flow/history API.
+   */
+  async getHistoricalTimeRangeData(
+    filter: HistoricalTimeRangeFilter
+  ): Promise<TimeRangeAnalysisSummary | null> {
+    const request = createHistoricalTimeRangeRequest(filter);
+    if (!request) {
+      throw new Error('Invalid device or time range parameters specified.');
+    }
+
+    try {
+      const allRecords: any[] = [];
+      let nextToken: string | undefined = undefined;
+      let pageCount = 0;
+      const MAX_PAGES = 10; // Safety guard: up to 10,000 records
+
+      do {
+        const queryParams: Record<string, any> = {
+          device_id: request.deviceId,
+          start_time: request.startTime,
+          end_time: request.endTime,
+          limit: 1000,
+        };
+        if (nextToken) {
+          queryParams.next_token = nextToken;
+        }
+
+        const data: any = await this.safeGet(
+          `${API_BASE_URL}/v1/flow/history`,
+          queryParams
+        );
+
+        if (!data || !data.records) {
+          break;
+        }
+
+        allRecords.push(...data.records);
+        nextToken = data.next_token;
+        pageCount++;
+      } while (nextToken && pageCount < MAX_PAGES);
+
+      // Sort strictly in chronological order (ascending timestamp)
+      const sorted = [...allRecords]
+        .filter((r) => {
+          const ts = Number(r.timestamp);
+          return Number.isFinite(ts) && ts >= request.startTime && ts <= request.endTime;
+        })
+        .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+      const count = sorted.length;
+
+      if (count === 0) {
+        return {
+          deviceId: request.deviceId,
+          startEpoch: request.startTime,
+          endEpoch: request.endTime,
+          startFormatted: formatIstFullDateTime(request.startTime),
+          endFormatted: formatIstFullDateTime(request.endTime),
+          readingsCount: 0,
+          totalConsumptionLitres: 0,
+          averageFlowRateLpm: 0,
+          minimumFlowRateLpm: 0,
+          maximumFlowRateLpm: 0,
+          firstReading: null,
+          lastReading: null,
+          readings: [],
+          flowTrend: [],
+        };
+      }
+
+      // Compute volume for each reading using authentic volume or actual interval delta
+      const calculatedReadings: Array<{
+        record: any;
+        flowRate: number;
+        volumeLitres: number;
+        intervalSeconds: number;
+      }> = [];
+
+      for (let i = 0; i < sorted.length; i++) {
+        const rec = sorted[i];
+        const flowRate = Number(rec.avg_flow_rate_lpm ?? rec.flow_rate_lpm ?? 0);
+        const currentTs = Number(rec.timestamp);
+
+        let intervalSec: number;
+        if (rec.interval_seconds !== undefined && Number.isFinite(Number(rec.interval_seconds)) && Number(rec.interval_seconds) > 0) {
+          intervalSec = Number(rec.interval_seconds);
+        } else if (i > 0) {
+          const prevTs = Number(sorted[i - 1].timestamp);
+          intervalSec = Math.max(1, currentTs - prevTs);
+        } else {
+          intervalSec = 60; // Default nominal sample duration for isolated initial point
+        }
+
+        let volumeLitres: number;
+        if (rec.volume_litres !== undefined && Number.isFinite(Number(rec.volume_litres))) {
+          volumeLitres = Number(rec.volume_litres);
+        } else if (rec.volume !== undefined && Number.isFinite(Number(rec.volume))) {
+          volumeLitres = Number(rec.volume);
+        } else {
+          // Volume = Flow Rate (L/min) * (Interval in seconds / 60)
+          volumeLitres = flowRate * (intervalSec / 60);
+        }
+
+        calculatedReadings.push({
+          record: rec,
+          flowRate,
+          volumeLitres,
+          intervalSeconds: intervalSec,
+        });
+      }
+
+      const totalVolume = calculatedReadings.reduce((sum, item) => sum + item.volumeLitres, 0);
+      const flowRates = calculatedReadings.map((item) => item.flowRate);
+      const totalConsumptionLitres = Number(totalVolume.toFixed(2));
+      const averageFlowRateLpm = Number((flowRates.reduce((a, b) => a + b, 0) / count).toFixed(2));
+      const minimumFlowRateLpm = Number(Math.min(...flowRates).toFixed(2));
+      const maximumFlowRateLpm = Number(Math.max(...flowRates).toFixed(2));
+
+      const firstRecord = sorted[0];
+      const lastRecord = sorted[sorted.length - 1];
+
+      const firstReading = {
+        timestamp: Number(firstRecord.timestamp),
+        flowRate: Number((firstRecord.avg_flow_rate_lpm ?? firstRecord.flow_rate_lpm ?? 0).toFixed(2)),
+        timeFormatted: formatIstFullDateTime(Number(firstRecord.timestamp)),
+      };
+
+      const lastReading = {
+        timestamp: Number(lastRecord.timestamp),
+        flowRate: Number((lastRecord.avg_flow_rate_lpm ?? lastRecord.flow_rate_lpm ?? 0).toFixed(2)),
+        timeFormatted: formatIstFullDateTime(Number(lastRecord.timestamp)),
+      };
+
+      // Unaggregated trend curve showing true device timestamps without synthetic interpolation
+      const flowTrend: FlowTrendDataPoint[] = calculatedReadings.map((item) => ({
+        time: formatIstFullDateTime(Number(item.record.timestamp), true),
+        flowRate: Number(item.flowRate.toFixed(2)),
+      }));
+
+      // Detailed reading list (reversed for latest-first in table)
+      const readings: FlowHistoryRecord[] = [...calculatedReadings].reverse().map((item) => {
+        const rate = item.flowRate;
+        return {
+          id: `${item.record.device_id}-${item.record.timestamp}`,
+          time: formatIstFullDateTime(Number(item.record.timestamp)),
+          duration: `${Math.round(item.intervalSeconds)} sec`,
+          flowRate: Number(rate.toFixed(2)),
+          totalLitres: Number(item.volumeLitres.toFixed(2)),
+          status: rate > 20 ? 'Peak' : rate < 5 ? 'Low Flow' : 'Normal',
+        };
+      });
+
+      return {
+        deviceId: request.deviceId,
+        startEpoch: request.startTime,
+        endEpoch: request.endTime,
+        startFormatted: formatIstFullDateTime(request.startTime),
+        endFormatted: formatIstFullDateTime(request.endTime),
+        readingsCount: count,
+        totalConsumptionLitres,
+        averageFlowRateLpm,
+        minimumFlowRateLpm,
+        maximumFlowRateLpm,
+        firstReading,
+        lastReading,
+        readings,
+        flowTrend,
+      };
+    } catch (err) {
+      console.error('[meterService] Failed to load historical time range data:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Exports time-range flow readings as a downloadable CSV file.
+   */
+  exportTimeRangeCSV(records: FlowHistoryRecord[], deviceId: string, startDate: string, endDate: string): boolean {
+    if (!records || records.length === 0) return false;
+    const headers = ['Timestamp (IST)', 'Device ID', 'Flow Rate (L/min)', 'Interval Volume (Litres)', 'Interval', 'Status', 'Record ID'];
+    const rows = records.map((r) => [
+      `"${r.time}"`,
+      `"${deviceId}"`,
+      r.flowRate.toFixed(2),
+      r.totalLitres.toFixed(2),
+      `"${r.duration}"`,
+      `"${r.status}"`,
+      `"${r.id}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `flowmeter_${deviceId}_${startDate}_to_${endDate}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
+  /**
+   * Generates a printable report for the analyzed time range.
+   * Renders full detailed logs when sample count is reasonably small (<= 50),
+   * and an executive summary table with sample overview when dataset is large.
+   */
+  exportTimeRangePDF(summary: TimeRangeAnalysisSummary): boolean {
+    if (!summary) return false;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return false;
+
+    const isLarge = summary.readingsCount > 50;
+    const displayReadings = isLarge ? summary.readings.slice(0, 50) : summary.readings;
+
+    const rowsHtml = displayReadings.map((r) => `
+      <tr>
+        <td style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0;">${r.time}</td>
+        <td style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${r.flowRate.toFixed(2)}</td>
+        <td style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; text-align: right;">${r.totalLitres.toFixed(2)}</td>
+        <td style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">${r.duration}</td>
+        <td style="padding: 6px 12px; border-bottom: 1px solid #e2e8f0; text-align: center;">${r.status}</td>
+      </tr>
+    `).join('');
+
+    const largeDataNotice = isLarge ? `
+      <div style="margin-top: 12px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534;">
+        <strong>Summary View Notice:</strong> Showing the first 50 of ${summary.readingsCount} total records for print efficiency. The complete raw unaggregated telemetry dataset is available via CSV Export.
+      </div>
+    ` : '';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Flow Analysis Report - ${summary.deviceId}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; padding: 24px; margin: 0; }
+            .header { border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 20px; }
+            .title { font-size: 20px; font-weight: bold; color: #0f172a; margin: 0; }
+            .subtitle { font-size: 12px; color: #64748b; margin-top: 4px; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+            .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+            .kpi-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; }
+            .kpi-value { font-size: 18px; font-weight: bold; color: #0f172a; margin-top: 4px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
+            th { background: #f1f5f9; padding: 8px 12px; text-align: left; font-weight: bold; color: #475569; border-bottom: 2px solid #cbd5e1; }
+            @media print {
+              body { padding: 0; }
+              @page { margin: 1.5cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">FLOSTAT Water Meter Analysis Report</h1>
+            <div class="subtitle">Device: <strong>${summary.deviceId}</strong> | Window (IST): <strong>${summary.startFormatted}</strong> &mdash; <strong>${summary.endFormatted}</strong></div>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Total Volume</div>
+              <div class="kpi-value">${summary.totalConsumptionLitres.toLocaleString()} L</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Avg Flow Rate</div>
+              <div class="kpi-value">${summary.averageFlowRateLpm} L/min</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Peak Flow Rate</div>
+              <div class="kpi-value">${summary.maximumFlowRateLpm} L/min</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Readings Count</div>
+              <div class="kpi-value">${summary.readingsCount}</div>
+            </div>
+          </div>
+          <h3 style="font-size: 14px; margin-bottom: 8px;">Detailed Reading Log (${isLarge ? `50 of ${summary.readingsCount}` : summary.readingsCount} samples)</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp (IST)</th>
+                <th style="text-align: right;">Flow Rate (L/min)</th>
+                <th style="text-align: right;">Volume (Litres)</th>
+                <th style="text-align: center;">Interval</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          ${largeDataNotice}
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+    return true;
+  }
+
+  /**
+   * Fetches hierarchical historical drill-down data according to the active level:
+   * YEAR: /v1/flow/summary?interval=month
+   * MONTH: /v1/flow/summary?interval=day
+   * DAY: /v1/flow/summary?interval=hour
+   * HOUR: /v1/flow/history
+   */
+  async getDrillDownData(
+    deviceId: string,
+    state: DrillDownState
+  ): Promise<DrillDownSummary | null> {
+    if (!deviceId) return null;
+
+    try {
+      if (state.level === 'year') {
+        const { start, end, interval } = getIstYearRange(state.year);
+        const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
+          device_id: deviceId,
+          start,
+          end,
+          interval,
+        });
+
+        const summary: SummaryResponse | null = data?.data ?? null;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const chartPoints = summary?.consumption_chart ?? [];
+
+        const dataPoints: DrillDownDataPoint[] = monthNames.map((name, idx) => {
+          const monthNum = idx + 1;
+          const monthId = String(monthNum).padStart(2, '0');
+          // Match against backend labels (e.g. "Jan 2026", "Jan", "2026-01")
+          const match = chartPoints.find((p) => {
+            const lbl = (p.label || '').toLowerCase();
+            return lbl.includes(name.toLowerCase()) || lbl.includes(`${state.year}-${monthId}`);
+          });
+
+          return {
+            id: monthId,
+            label: name,
+            value: match ? match.litres : 0,
+            litres: match ? match.litres : 0,
+            isPeak: match?.isPeak ?? false,
+            subLabel: `${name} ${state.year}`,
+          };
+        });
+
+        const totalVol = summary?.total_volume_litres ?? dataPoints.reduce((sum, p) => sum + p.value, 0);
+        const avgFlow = summary?.average_flow_rate_lpm ?? 0;
+        const minFlow = summary?.minimum_flow_rate_lpm ?? 0;
+        const maxFlow = summary?.maximum_flow_rate_lpm ?? 0;
+
+        return {
+          level: 'year',
+          deviceId,
+          title: `Year ${state.year} Overview`,
+          subtitle: `12 Calendar Months Aggregated Flow & Consumption Analysis`,
+          timeframeLabel: `${state.year}`,
+          startEpoch: start,
+          endEpoch: end,
+          totalVolumeLitres: Number(totalVol.toFixed(2)),
+          averageFlowRateLpm: Number(avgFlow.toFixed(2)),
+          minimumFlowRateLpm: Number(minFlow.toFixed(2)),
+          maximumFlowRateLpm: Number(maxFlow.toFixed(2)),
+          readingCount: 12,
+          dataPoints,
+        };
+      }
+
+      if (state.level === 'month') {
+        const { start, end, interval, lastDay } = getIstMonthRange(state.year, state.month);
+        const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
+          device_id: deviceId,
+          start,
+          end,
+          interval,
+        });
+
+        const summary: SummaryResponse | null = data?.data ?? null;
+        const monthStr = String(state.month).padStart(2, '0');
+        const monthFullTitle = formatIstMonthYear(`${state.year}-${monthStr}`, true);
+        const monthShort = formatIstMonthYear(`${state.year}-${monthStr}`, false).split(' ')[0];
+        const chartPoints = summary?.consumption_chart ?? [];
+
+        const dataPoints: DrillDownDataPoint[] = [];
+        for (let day = 1; day <= lastDay; day++) {
+          const dayStr = String(day).padStart(2, '0');
+          const fullDateStr = `${state.year}-${monthStr}-${dayStr}`;
+          const targetDayLabel = `${monthShort} ${dayStr}`;
+
+          const match = chartPoints.find((p) => {
+            const lbl = p.label || '';
+            return lbl === fullDateStr || lbl.toLowerCase().includes(targetDayLabel.toLowerCase()) || lbl.endsWith(`-${dayStr}`);
+          });
+
+          dataPoints.push({
+            id: fullDateStr,
+            label: `${day}`,
+            value: match ? match.litres : 0,
+            litres: match ? match.litres : 0,
+            isPeak: match?.isPeak ?? false,
+            subLabel: `${day} ${monthShort}`,
+          });
+        }
+
+        const totalVol = summary?.total_volume_litres ?? dataPoints.reduce((sum, p) => sum + p.value, 0);
+        const avgFlow = summary?.average_flow_rate_lpm ?? 0;
+        const minFlow = summary?.minimum_flow_rate_lpm ?? 0;
+        const maxFlow = summary?.maximum_flow_rate_lpm ?? 0;
+
+        return {
+          level: 'month',
+          deviceId,
+          title: `${monthFullTitle} Overview`,
+          subtitle: `Daily Consumption Breakdown across ${lastDay} calendar days`,
+          timeframeLabel: `${monthFullTitle}`,
+          startEpoch: start,
+          endEpoch: end,
+          totalVolumeLitres: Number(totalVol.toFixed(2)),
+          averageFlowRateLpm: Number(avgFlow.toFixed(2)),
+          minimumFlowRateLpm: Number(minFlow.toFixed(2)),
+          maximumFlowRateLpm: Number(maxFlow.toFixed(2)),
+          readingCount: lastDay,
+          dataPoints,
+        };
+      }
+
+      if (state.level === 'day') {
+        const { start, end, interval } = getIstDayRange(state.date);
+        const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
+          device_id: deviceId,
+          start,
+          end,
+          interval,
+        });
+
+        const summary: SummaryResponse | null = data?.data ?? null;
+        const dayTitle = formatIstDayLabel(state.date, true);
+        const chartPoints = summary?.consumption_chart ?? [];
+
+        const dataPoints: DrillDownDataPoint[] = [];
+        for (let hour = 0; hour < 24; hour++) {
+          const hourLabel = formatIstHourLabel(hour, true);
+          const fullHourLabel = formatIstHourLabel(hour, false);
+
+          const match = chartPoints.find((p) => {
+            const lbl = (p.label || '').toUpperCase();
+            const h12 = hour % 12 || 12;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const pattern = `${String(h12).padStart(2, '0')}:00 ${ampm}`;
+            const patternShort = `${h12} ${ampm}`;
+            return lbl.includes(pattern) || lbl.includes(patternShort) || lbl.includes(hourLabel.toUpperCase());
+          });
+
+          dataPoints.push({
+            id: String(hour),
+            label: hourLabel,
+            value: match ? match.litres : 0,
+            litres: match ? match.litres : 0,
+            isPeak: match?.isPeak ?? false,
+            subLabel: fullHourLabel,
+          });
+        }
+
+        const totalVol = summary?.total_volume_litres ?? dataPoints.reduce((sum, p) => sum + p.value, 0);
+        const avgFlow = summary?.average_flow_rate_lpm ?? 0;
+        const minFlow = summary?.minimum_flow_rate_lpm ?? 0;
+        const maxFlow = summary?.maximum_flow_rate_lpm ?? 0;
+
+        return {
+          level: 'day',
+          deviceId,
+          title: `${dayTitle} Hourly Breakdown`,
+          subtitle: `24-Hour Continuous Hourly Consumption & Flow Rate Summary`,
+          timeframeLabel: `${formatIstDayLabel(state.date)}`,
+          startEpoch: start,
+          endEpoch: end,
+          totalVolumeLitres: Number(totalVol.toFixed(2)),
+          averageFlowRateLpm: Number(avgFlow.toFixed(2)),
+          minimumFlowRateLpm: Number(minFlow.toFixed(2)),
+          maximumFlowRateLpm: Number(maxFlow.toFixed(2)),
+          readingCount: 24,
+          dataPoints,
+        };
+      }
+
+      if (state.level === 'hour') {
+        const { start, end } = getIstHourRange(state.date, state.hour);
+        const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/history`, {
+          device_id: deviceId,
+          start_time: start,
+          end_time: end,
+          limit: 1000,
+        });
+
+        const rawList: any[] = data?.records || [];
+        // Filter strictly within requested hour and sort chronologically
+        const sorted = [...rawList]
+          .filter((r) => {
+            const ts = Number(r.timestamp);
+            return Number.isFinite(ts) && ts >= start && ts <= end;
+          })
+          .sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+        const rawRecords: FlowHistoryRecord[] = [];
+        const dataPoints: DrillDownDataPoint[] = [];
+
+        for (let i = 0; i < sorted.length; i++) {
+          const rec = sorted[i];
+          const currentTs = Number(rec.timestamp);
+          const rate = Number(rec.avg_flow_rate_lpm ?? rec.flow_rate_lpm ?? 0);
+
+          let intervalSec = 60;
+          if (rec.interval_seconds && Number.isFinite(Number(rec.interval_seconds))) {
+            intervalSec = Number(rec.interval_seconds);
+          } else if (i > 0) {
+            intervalSec = Math.max(1, currentTs - Number(sorted[i - 1].timestamp));
+          }
+
+          let volume = rate * (intervalSec / 60);
+          if (rec.volume_litres !== undefined && Number.isFinite(Number(rec.volume_litres))) {
+            volume = Number(rec.volume_litres);
+          }
+
+          const timeFormatted = formatIstFullDateTime(currentTs);
+          const timeOnly = formatIstTimeOnly(currentTs, true);
+
+          const status = rate > 20 ? 'Peak' : rate < 5 ? 'Low Flow' : 'Normal';
+
+          const historyItem: FlowHistoryRecord = {
+            id: `${rec.device_id || deviceId}-${currentTs}`,
+            time: timeFormatted,
+            duration: `${Math.round(intervalSec)} sec`,
+            flowRate: Number(rate.toFixed(2)),
+            totalLitres: Number(volume.toFixed(2)),
+            status,
+          };
+
+          rawRecords.push(historyItem);
+
+          dataPoints.push({
+            id: String(currentTs),
+            label: timeOnly,
+            value: Number(rate.toFixed(2)),
+            flowRate: Number(rate.toFixed(2)),
+            litres: Number(volume.toFixed(2)),
+            isPeak: status === 'Peak',
+            subLabel: timeFormatted,
+            timestamp: currentTs,
+            rawRecord: historyItem,
+          });
+        }
+
+        const totalVol = dataPoints.reduce((sum, p) => sum + (p.litres ?? 0), 0);
+        const flowRates = dataPoints.map((p) => p.flowRate ?? 0);
+        const count = dataPoints.length;
+        const avgFlow = count > 0 ? flowRates.reduce((a, b) => a + b, 0) / count : 0;
+        const minFlow = count > 0 ? Math.min(...flowRates) : 0;
+        const maxFlow = count > 0 ? Math.max(...flowRates) : 0;
+
+        const dayFormatted = formatIstDayLabel(state.date);
+        const hourFormatted = formatIstHourLabel(state.hour);
+
+        return {
+          level: 'hour',
+          deviceId,
+          title: `${dayFormatted} • ${hourFormatted}`,
+          subtitle: `Authentic Minute-Level Telemetry Log (${count} readings recorded)`,
+          timeframeLabel: `${dayFormatted} ${hourFormatted}`,
+          startEpoch: start,
+          endEpoch: end,
+          totalVolumeLitres: Number(totalVol.toFixed(2)),
+          averageFlowRateLpm: Number(avgFlow.toFixed(2)),
+          minimumFlowRateLpm: Number(minFlow.toFixed(2)),
+          maximumFlowRateLpm: Number(maxFlow.toFixed(2)),
+          readingCount: count,
+          dataPoints,
+          rawRecords,
+        };
+      }
+
+      return null;
+    } catch (err) {
+      console.error('[meterService] Error in getDrillDownData:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Exports minute-level historical records as a CSV file.
+   */
+  exportDrillDownCSV(records: FlowHistoryRecord[], deviceId: string, timeframeLabel: string): boolean {
+    if (!records || records.length === 0) return false;
+    const cleanLabel = timeframeLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const headers = ['Timestamp (IST)', 'Device ID', 'Flow Rate (L/min)', 'Volume (Litres)', 'Interval', 'Status', 'Record ID'];
+    const rows = records.map((r) => [
+      `"${r.time}"`,
+      `"${deviceId}"`,
+      r.flowRate.toFixed(2),
+      r.totalLitres.toFixed(2),
+      `"${r.duration}"`,
+      `"${r.status}"`,
+      `"${r.id}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `flowmeter_${deviceId}_drilldown_${cleanLabel}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
+  /**
    * Triggers export of flow history data in CSV format
    */
   async exportCSV(_meterId?: string): Promise<boolean | null> {
@@ -376,3 +1016,4 @@ export class MeterService {
 }
 
 export const meterService = new MeterService();
+

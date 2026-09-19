@@ -17,6 +17,8 @@ interface ConsumptionChartProps {
   data?: ConsumptionDataPoint[] | null;
   activeTab?: TimeRangeTab;
   customDateRange?: DateRange;
+  selectedMonth?: string;
+  selectedYear?: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -86,7 +88,7 @@ const parseFlexibleDate = (label: string): Date | null => {
   if (!label) return null;
   const trimmed = label.trim();
 
-  const yyyyMmDdMatch = trimmed.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  const yyyyMmDdMatch = trimmed.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
   if (yyyyMmDdMatch) {
     const year = parseInt(yyyyMmDdMatch[1], 10);
     const month = parseInt(yyyyMmDdMatch[2], 10) - 1;
@@ -96,7 +98,7 @@ const parseFlexibleDate = (label: string): Date | null => {
 
   const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-  const ddMmmYyyyMatch = trimmed.match(/^(\d{1,2})[\s\-]+([a-zA-Z]{3})[\s\-]+(\d{4})$/);
+  const ddMmmYyyyMatch = trimmed.match(/^(\d{1,2})[\s-]+([a-zA-Z]{3})[\s-]+(\d{4})$/);
   if (ddMmmYyyyMatch) {
     const day = parseInt(ddMmmYyyyMatch[1], 10);
     const monthStr = ddMmmYyyyMatch[2].toLowerCase();
@@ -107,7 +109,7 @@ const parseFlexibleDate = (label: string): Date | null => {
     }
   }
 
-  const mmmDdYyyyMatch = trimmed.match(/^([a-zA-Z]{3})[\s\-]+(\d{1,2})[\s\-]+(\d{4})$/);
+  const mmmDdYyyyMatch = trimmed.match(/^([a-zA-Z]{3})[\s-]+(\d{1,2})[\s-]+(\d{4})$/);
   if (mmmDdYyyyMatch) {
     const monthStr = mmmDdYyyyMatch[1].toLowerCase();
     const day = parseInt(mmmDdYyyyMatch[2], 10);
@@ -154,8 +156,8 @@ const normalizeDateLabel = (label: string): string => {
     const year = parseInt(match[1], 10);
     const month = parseInt(match[2], 10) - 1;
     const day = parseInt(match[3], 10);
-    const d = new Date(year, month, day);
-    const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+    const d = new Date(Date.UTC(year, month, day));
+    const monthStr = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
     const dayStr = day < 10 ? `0${day}` : `${day}`;
     return `${monthStr} ${dayStr}`;
   }
@@ -171,22 +173,20 @@ const normalizeDateLabel = (label: string): string => {
   return label;
 };
 
-const generateMonthLabels = (): string[] => {
+const generateMonthLabels = (selectedMonth?: string): string[] => {
+  const targetMonth = selectedMonth || new Date().toISOString().slice(0, 7);
+  const parts = targetMonth.split('-');
+  const year = parseInt(parts[0], 10) || new Date().getFullYear();
+  const month = parseInt(parts[1], 10) || 1;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
   const labels: string[] = [];
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - 29);
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthName = monthNames[month - 1] || 'Jan';
 
-  const current = new Date(start);
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-
-  while (current <= end) {
-    const monthStr = current.toLocaleDateString('en-US', { month: 'short' });
-    const dayVal = current.getDate();
-    const dayStr = dayVal < 10 ? `0${dayVal}` : `${dayVal}`;
-    labels.push(`${monthStr} ${dayStr}`);
-    current.setDate(current.getDate() + 1);
+  for (let day = 1; day <= lastDay; day++) {
+    const dayStr = day < 10 ? `0${day}` : `${day}`;
+    labels.push(`${monthName} ${dayStr}`);
   }
   return labels;
 };
@@ -194,6 +194,7 @@ const generateMonthLabels = (): string[] => {
 export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
   data,
   activeTab = 'today',
+  selectedMonth,
 }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -221,7 +222,7 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
         return normalizeWeekLabel(backendLabel) === genLabel;
       };
     } else if (activeTab === 'month') {
-      targetLabels = generateMonthLabels();
+      targetLabels = generateMonthLabels(selectedMonth);
       matchFn = (backendLabel, genLabel) => {
         return normalizeDateLabel(backendLabel) === normalizeDateLabel(genLabel);
       };
@@ -242,7 +243,7 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
         isPeak: match ? match.isPeak : false,
       };
     });
-  }, [data, activeTab]);
+  }, [data, activeTab, selectedMonth]);
 
   const hasData = chartData.some((d) => d.litres > 0);
 

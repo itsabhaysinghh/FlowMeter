@@ -7,6 +7,8 @@ import {
   Server, 
   ChevronDown, 
   ChevronUp, 
+  ChevronLeft,
+  ChevronRight,
   Calendar, 
   Star, 
   Pin, 
@@ -17,6 +19,7 @@ import {
   Trash2,
   CheckCircle2,
   Info,
+  Layers,
 } from 'lucide-react';
 import { PieChart, PieSlice, PieCenter, Legend, type PieData } from '../components/ui/PieChart';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange, DeleteFlowMeterDataResult, SummaryResponse, LiveFlowMetrics } from '../types/meter.types';
@@ -27,7 +30,10 @@ import { ChartCard } from '../components/common/ChartCard';
 import { ConsumptionChart } from '../components/water-meter/ConsumptionChart';
 import { FlowTrendChart } from '../components/water-meter/FlowTrendChart';
 import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
+import { TimeRangeAnalysisView } from '../components/water-meter/TimeRangeAnalysisView';
+import { HistoricalDrillDownView } from '../components/water-meter/HistoricalDrillDownView';
 import { formatNumber } from '../utils/formatters';
+import { formatIstMonthYear, shiftIstMonth, getIstDateInputValue } from '../utils/ist';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
 import { GlowingBadge } from '../components/ui/glowing-badge';
 import { RefreshButton } from '../components/unlumen-ui/primitives/refresh';
@@ -54,11 +60,8 @@ export interface WaterMeterMonitoringPageProps {
   onDeviceChange?: (device: DeviceOption) => void;
 }
 
-const formatMonthLabel = (monthStr?: string) => {
-  if (!monthStr) return '';
-  const [year, month] = monthStr.split('-');
-  const d = new Date(Number(year), Number(month) - 1, 1);
-  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+const formatMonthLabel = (monthStr?: string, full = false) => {
+  return formatIstMonthYear(monthStr, full);
 };
 
 const formatDateString = (dateStr?: string) => {
@@ -224,7 +227,7 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
               : activeTab === 'specific'
               ? `Specific date (${formatDateString(specificDate)})`
               : activeTab === 'month'
-              ? `Specific month (${formatMonthLabel(selectedMonth)})`
+              ? `Specific month (${formatMonthLabel(selectedMonth, true)})`
               : activeTab === 'year'
               ? `Specific year (${selectedYear})`
               : 'Interval consumption breakdown across selected timeframe'
@@ -235,6 +238,8 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
             data={data.consumptionTrend}
             activeTab={activeTab}
             customDateRange={customDateRange}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
           />
         </ChartCard>
 
@@ -395,6 +400,23 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
             );
           }
 
+          if (tab.id === 'month') {
+            const formattedMonth = selectedMonth ? formatMonthLabel(selectedMonth) : '';
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabClick('month')}
+                className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
+                  activeTab === 'month'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+                }`}
+              >
+                {activeTab === 'month' && formattedMonth ? `Month (${formattedMonth})` : 'Month'}
+              </button>
+            );
+          }
+
           return (
             <button
               key={tab.id}
@@ -413,15 +435,74 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
 
       {/* Month Picker */}
       {activeTab === 'month' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Month:</span>
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer"
-          />
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <span className="text-slate-500 dark:text-slate-400 font-medium text-[11px] mr-0.5">Month:</span>
+
+          <button
+            type="button"
+            onClick={() => setSelectedMonth(shiftIstMonth(selectedMonth, -1))}
+            className="p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/60 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors cursor-pointer"
+            title="Previous Month"
+            aria-label="Previous Month"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+
+          <select
+            value={selectedMonth.split('-')[1] || '01'}
+            onChange={(e) => {
+              const currentYear = selectedMonth.split('-')[0] || new Date().getFullYear().toString();
+              setSelectedMonth(`${currentYear}-${e.target.value}`);
+            }}
+            aria-label="Select month"
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-blue-100/60 dark:hover:bg-blue-900/40"
+          >
+            {[
+              { value: '01', label: 'Jan' },
+              { value: '02', label: 'Feb' },
+              { value: '03', label: 'Mar' },
+              { value: '04', label: 'Apr' },
+              { value: '05', label: 'May' },
+              { value: '06', label: 'Jun' },
+              { value: '07', label: 'Jul' },
+              { value: '08', label: 'Aug' },
+              { value: '09', label: 'Sep' },
+              { value: '10', label: 'Oct' },
+              { value: '11', label: 'Nov' },
+              { value: '12', label: 'Dec' },
+            ].map((m) => (
+              <option key={m.value} value={m.value} className="dark:bg-slate-900 text-slate-800 dark:text-white">
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedMonth.split('-')[0] || new Date().getFullYear().toString()}
+            onChange={(e) => {
+              const currentMonth = selectedMonth.split('-')[1] || '01';
+              setSelectedMonth(`${e.target.value}-${currentMonth}`);
+            }}
+            aria-label="Select year"
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-blue-100/60 dark:hover:bg-blue-900/40"
+          >
+            {years.map((y) => (
+              <option key={y} value={y.toString()} className="dark:bg-slate-900 text-slate-800 dark:text-white">
+                {y}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => setSelectedMonth(shiftIstMonth(selectedMonth, 1))}
+            className="p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/60 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors cursor-pointer"
+            title="Next Month"
+            aria-label="Next Month"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -516,10 +597,10 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   selectedDevice,
   onDeviceChange,
 }) => {
-  const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare'>('overview');
+  const [activeNav, setActiveNav] = useState<'overview' | 'devices' | 'compare' | 'timerange' | 'drilldown'>('overview');
   const [activeTab, setActiveTab] = useState<TimeRangeTab>(() => (localStorage.getItem('flostat_active_tab') as TimeRangeTab) || 'today');
   const [specificDate, setSpecificDate] = useState<string>(() => localStorage.getItem('flostat_specific_date') || new Date().toISOString().split('T')[0]);
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => localStorage.getItem('flostat_selected_month') || new Date().toISOString().split('T')[0].slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => localStorage.getItem('flostat_selected_month') || getIstDateInputValue().slice(0, 7));
   const [selectedYear, setSelectedYear] = useState<string>(() => localStorage.getItem('flostat_selected_year') || new Date().getFullYear().toString());
   const [customDateRange, setCustomDateRange] = useState<DateRange>(() => {
     const saved = localStorage.getItem('flostat_custom_date_range');
@@ -1284,6 +1365,30 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               <span>Comparison Mode</span>
             </button>
 
+            <button
+              onClick={() => setActiveNav('timerange')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                activeNav === 'timerange'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              <span>Time-Range Analysis</span>
+            </button>
+
+            <button
+              onClick={() => setActiveNav('drilldown')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                activeNav === 'drilldown'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Historical Drill-Down</span>
+            </button>
+
           </div>
         </aside>
 
@@ -1972,6 +2077,22 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
             </div>
           )}
 
+          {/* VIEW 4: Custom Historical Time-Range Flow Analysis */}
+          {activeNav === 'timerange' && (
+            <TimeRangeAnalysisView
+              devices={devices}
+              initialDeviceId={selectedDevice?.id}
+            />
+          )}
+
+          {/* VIEW 5: Hierarchical Historical Data Drill-Down */}
+          {activeNav === 'drilldown' && (
+            <HistoricalDrillDownView
+              devices={devices}
+              initialDeviceId={selectedDevice?.id}
+            />
+          )}
+
         </div>
       </div>
 
@@ -2032,6 +2153,16 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     <Zap className="w-4 h-4 text-amber-500 shrink-0" />
                     <span>Comparison Mode</span>
                     <CommandShortcut>⌘3</CommandShortcut>
+                  </CommandItem>
+                  <CommandItem onSelect={() => { setActiveNav('timerange'); setIsCommandOpen(false); }}>
+                    <Clock className="w-4 h-4 text-cyan-500 shrink-0" />
+                    <span>Time-Range Analysis</span>
+                    <CommandShortcut>⌘4</CommandShortcut>
+                  </CommandItem>
+                  <CommandItem onSelect={() => { setActiveNav('drilldown'); setIsCommandOpen(false); }}>
+                    <Layers className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span>Historical Drill-Down</span>
+                    <CommandShortcut>⌘5</CommandShortcut>
                   </CommandItem>
                 </CommandGroup>
               </>

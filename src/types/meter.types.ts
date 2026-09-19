@@ -93,3 +93,68 @@ export interface DeleteFlowMeterDataResult {
   deletedCount?: number;
   message?: string;
 }
+
+export interface HistoricalTimeRangeFilter {
+  deviceId: string;
+  startDate: string; // YYYY-MM-DD in IST
+  startTime: string; // HH:mm in IST (24h or parsed)
+  endDate: string;   // YYYY-MM-DD in IST
+  endTime: string;   // HH:mm in IST (24h or parsed)
+}
+
+export interface TimeRangeAnalysisSummary {
+  deviceId: string;
+  startEpoch: number;
+  endEpoch: number;
+  startFormatted: string;
+  endFormatted: string;
+  readingsCount: number;
+  totalConsumptionLitres: number;
+  averageFlowRateLpm: number;
+  minimumFlowRateLpm: number;
+  maximumFlowRateLpm: number;
+  firstReading: { timestamp: number; flowRate: number; timeFormatted: string } | null;
+  lastReading: { timestamp: number; flowRate: number; timeFormatted: string } | null;
+  readings: FlowHistoryRecord[];
+  flowTrend: FlowTrendDataPoint[];
+}
+
+export type DrillDownLevel = 'year' | 'month' | 'day' | 'hour';
+
+export interface DrillDownState {
+  level: DrillDownLevel;
+  year: number;
+  month: number; // 1-indexed: 1 = Jan, 12 = Dec
+  date: string;  // YYYY-MM-DD
+  hour: number;  // 0..23
+}
+
+export interface DrillDownDataPoint {
+  id: string;
+  label: string;
+  value: number;
+  flowRate?: number;
+  litres?: number;
+  isPeak?: boolean;
+  subLabel?: string;
+  timestamp?: number;
+  rawRecord?: FlowHistoryRecord;
+}
+
+export interface DrillDownSummary {
+  level: DrillDownLevel;
+  deviceId: string;
+  title: string;
+  subtitle: string;
+  timeframeLabel: string;
+  startEpoch: number;
+  endEpoch: number;
+  totalVolumeLitres: number;
+  averageFlowRateLpm: number;
+  minimumFlowRateLpm: number;
+  maximumFlowRateLpm: number;
+  readingCount: number;
+  dataPoints: DrillDownDataPoint[];
+  rawRecords?: FlowHistoryRecord[];
+}
+
