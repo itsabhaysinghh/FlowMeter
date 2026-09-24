@@ -145,7 +145,7 @@ export class DynamoFlowRepository {
         ExpressionAttributeNames: { '#pk': 'flow_meter_id', '#timestamp': 'timestamp' },
         ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startStr, ':endTime': endStr },
         ExclusiveStartKey: decodeKey(nextToken),
-        Limit: limit,
+        ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
       }));
       return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
@@ -154,9 +154,9 @@ export class DynamoFlowRepository {
         TableName: this.readingsTableName,
         KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#pk': 'device_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startStr, ':endTime': endStr },
         ExclusiveStartKey: decodeKey(nextToken),
-        Limit: limit,
+        ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
       }));
       return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };

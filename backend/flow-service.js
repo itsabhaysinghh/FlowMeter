@@ -92,7 +92,7 @@ export class FlowService {
     let allRecords = [];
     let nextToken = query.next_token;
     do {
-      const page = await this.repository.getReadingsPage({ ...range, nextToken, scanIndexForward: false });
+      const page = await this.repository.getReadingsPage({ ...range, nextToken, limit: 1000, scanIndexForward: false });
       allRecords.push(...page.records);
       nextToken = page.nextToken;
     } while (nextToken);

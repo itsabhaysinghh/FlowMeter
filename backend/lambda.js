@@ -91,7 +91,22 @@ export async function handler(event, context = {}) {
     } else if (httpMethod === 'GET' && (path === '/v1/flow/live' || path === '/flow/live')) {
       result = await service.getLive(query);
     } else if (httpMethod === 'GET' && (path === '/v1/flow/history' || path === '/flow/history')) {
-      result = await service.getHistory(query);
+      const rawResult = await service.getHistory(query);
+      // Compress the response to stay under API Gateway 6MB limit when uncompressed
+      const zlib = require('zlib');
+      const compressed = zlib.gzipSync(JSON.stringify(rawResult));
+      const base64Body = compressed.toString('base64');
+      // Override result with compressed payload
+      result = {
+        ...rawResult,
+        __compressed: true // marker for debugging (optional)
+      };
+      // Prepare response body as base64 gzip
+      const responseBody = base64Body;
+      // Adjust headers for gzip and indicate binary payload
+      Object.assign(headers, { 'content-encoding': 'gzip' });
+      // We'll return compressed body later; set a flag
+      var __compressedBody = responseBody;
     } else if (httpMethod === 'GET' && (path === '/v1/flow/summary' || path === '/flow/summary')) {
       result = await service.getSummary(query);
     } else if (httpMethod === 'POST' && (path === '/v1/flow/readings' || path === '/flow/readings')) {
@@ -130,6 +145,10 @@ export async function handler(event, context = {}) {
       durationMs: Date.now() - startTime,
     }));
 
+    // Return response, using compressed body if applicable
+    if (typeof __compressedBody !== 'undefined') {
+      return { statusCode: 200, headers, body: __compressedBody, isBase64Encoded: true };
+    }
     return { statusCode: 200, headers, body: JSON.stringify(result) };
   } catch (error) {
     const statusCode = error instanceof HttpError ? error.statusCode : 500;
