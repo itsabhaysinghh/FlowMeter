@@ -1,4 +1,5 @@
 import { getBackendConfig } from './config.js';
+import { gzipSync } from 'node:zlib';
 import { DynamoFlowRepository } from './flow-repository.js';
 import { FlowService } from './flow-service.js';
 import { HttpError } from './validation.js';
@@ -93,8 +94,8 @@ export async function handler(event, context = {}) {
     } else if (httpMethod === 'GET' && (path === '/v1/flow/history' || path === '/flow/history')) {
       const rawResult = await service.getHistory(query);
       // Compress the response to stay under API Gateway 6MB limit when uncompressed
-      const zlib = require('zlib');
-      const compressed = zlib.gzipSync(JSON.stringify(rawResult));
+      // Compress the response to stay under API Gateway 6MB limit when uncompressed
+      const compressed = gzipSync(JSON.stringify(rawResult));
       const base64Body = compressed.toString('base64');
       // Override result with compressed payload
       result = {
