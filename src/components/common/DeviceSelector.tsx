@@ -43,7 +43,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-flostat-border dark:border-dark-border bg-white dark:bg-dark-card hover:bg-slate-50 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-100 shadow-sm transition-all active:scale-98 min-w-[260px] sm:min-w-[320px] disabled:opacity-80"
       >
         <div className="flex items-center gap-2.5 text-left truncate">
-          <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-flostat-primary dark:text-blue-400">
+          <div className="p-2 rounded-lg bg-[#00B4D8]/10 text-[#00B4D8]">
             <Cpu className="w-4 h-4" />
           </div>
           <div className="truncate">
@@ -70,7 +70,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <div className="absolute right-0 sm:left-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white dark:bg-dark-card border border-flostat-border dark:border-dark-border shadow-xl z-50 p-1.5 space-y-1">
           <div className="px-3 py-2 text-[11px] font-bold tracking-wider uppercase text-slate-400 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <span>SELECT METER DEVICE</span>
-            <Radio className="w-3.5 h-3.5 text-flostat-secondary animate-pulse" />
+            <Radio className="w-3.5 h-3.5 text-[#00B4D8] animate-pulse" />
           </div>
 
           <div className="max-h-64 overflow-y-auto space-y-1">
@@ -82,7 +82,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
                   onClick={() => handleSelect(dev)}
                   className={`w-full flex items-start justify-between p-2.5 rounded-xl text-left text-xs transition-all ${
                     isSelected
-                      ? 'bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-flostat-primary dark:text-blue-300'
+                      ? 'bg-[#00B4D8]/10 border border-[#00B4D8]/30 text-[#0A1F44] font-bold'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300'
                   }`}
                 >
@@ -98,7 +98,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
                       {dev.location}
                     </div>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-flostat-secondary mt-0.5" />}
+                  {isSelected && <Check className="w-4 h-4 text-[#00B4D8] mt-0.5" />}
                 </button>
               );
             })}

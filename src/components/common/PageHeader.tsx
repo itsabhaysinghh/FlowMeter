@@ -41,11 +41,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       {/* Breadcrumb Navigation & Top Action Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <nav className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-          <span className="hover:text-flostat-primary dark:hover:text-blue-400 transition-colors cursor-pointer">
+          <span className="hover:text-[#00B4D8] transition-colors cursor-pointer">
             Flostat
           </span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hover:text-flostat-primary dark:hover:text-blue-400 transition-colors cursor-pointer">
+          <span className="hover:text-[#00B4D8] transition-colors cursor-pointer">
             Water Meter
           </span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -99,7 +99,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
               {currentDate}
             </span>
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-end gap-1.5 mt-0.5">
-              <Clock className="w-3.5 h-3.5 text-flostat-secondary" />
+              <Clock className="w-3.5 h-3.5 text-[#00B4D8]" />
               {liveTime}
             </span>
           </div>
@@ -108,11 +108,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="p-2.5 rounded-xl border border-flostat-border dark:border-dark-border bg-white dark:bg-dark-card text-slate-600 dark:text-slate-300 hover:text-flostat-primary dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              className="p-2.5 rounded-xl border border-flostat-border dark:border-dark-border bg-white dark:bg-dark-card text-slate-600 dark:text-slate-300 hover:text-[#00B4D8] hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95 disabled:opacity-50"
               title="Refresh Telemetry"
               aria-label="Refresh Telemetry"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-flostat-secondary' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#00B4D8]' : ''}`} />
             </button>
           )}
         </div>
@@ -121,7 +121,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       {/* Facility & Device Metadata Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white dark:bg-dark-card p-3.5 rounded-2xl border border-flostat-border dark:border-dark-border shadow-flostat text-xs">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-flostat-primary dark:text-blue-400">
+          <div className="p-2 rounded-xl bg-[#00B4D8]/10 text-[#00B4D8]">
             <Building2 className="w-4 h-4" />
           </div>
           <div>
@@ -133,7 +133,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-flostat-primary dark:text-blue-400">
+          <div className="p-2 rounded-xl bg-[#00B4D8]/10 text-[#00B4D8]">
             <Gauge className="w-4 h-4" />
           </div>
           <div>
@@ -157,7 +157,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+          <div className="p-2 rounded-xl bg-[#0A1F44]/10 text-[#0A1F44]">
             <Calendar className="w-4 h-4" />
           </div>
           <div>

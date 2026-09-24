@@ -107,7 +107,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           {icon && (
-            <div className="p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-blue-600 dark:text-blue-400 border border-slate-200/50 dark:border-slate-700/60 shadow-sm transition-transform duration-200 group-hover:scale-105">
+            <div className="p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-[#00B4D8] border border-slate-200/50 dark:border-slate-700/60 shadow-sm transition-transform duration-200 group-hover:scale-105">
               {icon}
             </div>
           )}
@@ -146,7 +146,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                         }}
                         className={`px-3 py-1 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer flex items-center gap-1.5 ${
                           activeTab === 'specific'
-                            ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-slate-700'
+                            ? 'bg-white dark:bg-slate-900 text-[#00B4D8] shadow-sm border border-slate-200/60 dark:border-slate-700'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                         }`}
                       >
@@ -181,7 +181,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
                     onClick={() => handleTabClick(tab.id)}
                     className={`px-3 py-1 text-xs font-bold rounded-lg transition-all capitalize cursor-pointer ${
                       activeTab === tab.id
-                        ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/60 dark:border-slate-700'
+                        ? 'bg-white dark:bg-slate-900 text-[#00B4D8] shadow-sm border border-slate-200/60 dark:border-slate-700'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
@@ -196,7 +196,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
           {activeTab === 'custom' && (
             <button
               onClick={() => setIsDatePickerOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-semibold hover:bg-blue-100/80 dark:hover:bg-blue-900/50 transition-all shadow-xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/10 text-[#00B4D8] text-xs font-semibold hover:bg-[#00B4D8]/20 transition-all shadow-xs"
               title="Click to change custom date range"
             >
               <Calendar className="w-3.5 h-3.5" />
@@ -217,7 +217,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
             >
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <Calendar className="w-4 h-4 text-[#00B4D8]" />
                   <span className="text-xs font-bold text-slate-900 dark:text-white">
                     Select Date Range
                   </span>
@@ -277,7 +277,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({
               {/* Apply Button */}
               <button
                 onClick={handleApplyCustomRange}
-                className="w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl bg-[#00B4D8] hover:bg-[#0096B4] text-white text-xs font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />
                 Apply Date Range

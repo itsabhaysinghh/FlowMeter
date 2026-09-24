@@ -39,10 +39,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
     }
 
     return {
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      text: 'text-blue-700 dark:text-blue-400',
-      border: 'border-blue-200 dark:border-blue-800/60',
-      dot: 'bg-blue-500',
+      bg: 'bg-[#00B4D8]/10 dark:bg-[#00B4D8]/10',
+      text: 'text-[#00B4D8] dark:text-[#00B4D8]',
+      border: 'border-[#00B4D8]/30 dark:border-[#00B4D8]/30',
+      dot: 'bg-[#00B4D8]',
     };
   };
 

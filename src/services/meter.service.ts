@@ -15,6 +15,10 @@ import type {
   DrillDownState,
   DrillDownSummary,
   DrillDownDataPoint,
+  ComparisonModeType,
+  MeterComparisonMetric,
+  ComparisonSideAggregate,
+  ComparisonEngineResult,
 } from '../types/meter.types';
 import { formatLastSeen } from '../utils/formatters';
 import { 
@@ -29,6 +33,8 @@ import {
   formatIstDayLabel,
   formatIstHourLabel,
   formatIstTimeOnly,
+  formatIstDateInput,
+  getIstDateInputValue,
 } from '../utils/ist';
 
 // Retrieve base URL from environment variable
@@ -233,6 +239,8 @@ export class MeterService {
         `${API_BASE_URL}/v1/flow/summary`,
         {
           device_id: meterId,
+          start_time: start,
+          end_time: end,
           start,
           end,
           interval
@@ -702,6 +710,8 @@ export class MeterService {
         const { start, end, interval } = getIstYearRange(state.year);
         const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
           device_id: deviceId,
+          start_time: start,
+          end_time: end,
           start,
           end,
           interval,
@@ -756,6 +766,8 @@ export class MeterService {
         const { start, end, interval, lastDay } = getIstMonthRange(state.year, state.month);
         const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
           device_id: deviceId,
+          start_time: start,
+          end_time: end,
           start,
           end,
           interval,
@@ -814,6 +826,8 @@ export class MeterService {
         const { start, end, interval } = getIstDayRange(state.date);
         const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/summary`, {
           device_id: deviceId,
+          start_time: start,
+          end_time: end,
           start,
           end,
           interval,
@@ -993,6 +1007,265 @@ export class MeterService {
     const link = document.createElement('a');
     link.href = url;
     link.download = `flowmeter_${deviceId}_drilldown_${cleanLabel}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
+  /**
+   * Performs aggregated comparison analysis between two sides (individual devices, multiple devices, or device blocks)
+   * over an identical operator-selected timeframe.
+   */
+  async getComparisonData(params: {
+    mode: ComparisonModeType;
+    sideALabel: string;
+    deviceIdsA: string[];
+    sideBLabel: string;
+    deviceIdsB: string[];
+    period: TimeRangeTab;
+    customDateRange?: { startDate: string; endDate: string };
+    specificDate?: string;
+    selectedMonth?: string;
+    selectedYear?: string;
+    allDevices?: DeviceOption[];
+  }): Promise<ComparisonEngineResult | null> {
+    const {
+      mode,
+      sideALabel,
+      deviceIdsA,
+      sideBLabel,
+      deviceIdsB,
+      period,
+      customDateRange,
+      specificDate,
+      selectedMonth,
+      selectedYear,
+      allDevices = [],
+    } = params;
+
+    const uniqueDeviceIds = Array.from(new Set([...deviceIdsA, ...deviceIdsB])).filter(Boolean);
+    if (uniqueDeviceIds.length === 0) {
+      return null;
+    }
+
+    // Determine timeframe label
+    let timeframeLabel = '';
+    if (period === 'today') {
+      timeframeLabel = `Today (${formatIstDateInput(getIstDateInputValue())})`;
+    } else if (period === 'specific' && specificDate) {
+      timeframeLabel = `Date: ${formatIstDateInput(specificDate)}`;
+    } else if (period === 'week') {
+      timeframeLabel = 'Past 7 Days';
+    } else if (period === 'month') {
+      timeframeLabel = formatIstMonthYear(selectedMonth || getIstDateInputValue().slice(0, 7), true);
+    } else if (period === 'year') {
+      timeframeLabel = `Year ${selectedYear || getIstDateInputValue().slice(0, 4)}`;
+    } else if (period === 'custom' && customDateRange) {
+      timeframeLabel = `${formatIstDateInput(customDateRange.startDate)} – ${formatIstDateInput(customDateRange.endDate)}`;
+    } else {
+      timeframeLabel = period;
+    }
+
+    // Fetch summaries concurrently for each unique device
+    const summariesMap = new Map<string, SummaryResponse | null>();
+    await Promise.all(
+      uniqueDeviceIds.map(async (devId) => {
+        try {
+          const res = await this.getConsumption(
+            period,
+            devId,
+            customDateRange,
+            specificDate,
+            selectedMonth,
+            selectedYear
+          );
+          summariesMap.set(devId, res);
+        } catch (e) {
+          console.error(`[getComparisonData] Error fetching for ${devId}:`, e);
+          summariesMap.set(devId, null);
+        }
+      })
+    );
+
+    // Build metric object for each device
+    const buildMeterMetric = (devId: string): MeterComparisonMetric => {
+      const devObj = allDevices.find((d) => d.id === devId);
+      const summary = summariesMap.get(devId);
+      return {
+        deviceId: devId,
+        deviceName: devObj?.name || devId,
+        facility: devObj?.facility || 'Main Facility',
+        location: devObj?.location || 'General',
+        status: devObj?.status || 'online',
+        totalVolumeLitres: summary?.total_volume_litres || 0,
+        averageFlowRateLpm: summary?.average_flow_rate_lpm || 0,
+        minimumFlowRateLpm: summary?.minimum_flow_rate_lpm || 0,
+        maximumFlowRateLpm: summary?.maximum_flow_rate_lpm || 0,
+        consumptionChart: summary?.consumption_chart || [],
+        flowTrendChart: summary?.flow_trend_chart || [],
+      };
+    };
+
+    const sideAMetrics = deviceIdsA.map(buildMeterMetric);
+    const sideBMetrics = deviceIdsB.map(buildMeterMetric);
+
+    // Aggregate side metrics
+    const aggregateSide = (
+      label: string,
+      deviceIds: string[],
+      metrics: MeterComparisonMetric[]
+    ): ComparisonSideAggregate => {
+      const totalVolumeLitres = metrics.reduce((sum, m) => sum + m.totalVolumeLitres, 0);
+      const averageFlowRateLpm = metrics.reduce((sum, m) => sum + m.averageFlowRateLpm, 0);
+      const maximumFlowRateLpm = metrics.length > 0 ? Math.max(...metrics.map((m) => m.maximumFlowRateLpm)) : 0;
+      const minimumFlowRateLpm = metrics.length > 0 ? Math.min(...metrics.map((m) => m.minimumFlowRateLpm)) : 0;
+
+      // Group interval consumption by label
+      const intervalMap = new Map<string, { litres: number; count: number }>();
+      metrics.forEach((m) => {
+        m.consumptionChart.forEach((pt) => {
+          const existing = intervalMap.get(pt.label) || { litres: 0, count: 0 };
+          existing.litres += pt.litres || 0;
+          existing.count += 1;
+          intervalMap.set(pt.label, existing);
+        });
+      });
+
+      const intervalDataPoints = Array.from(intervalMap.entries()).map(([intervalLabel, val]) => ({
+        label: intervalLabel,
+        litres: Math.round(val.litres * 100) / 100,
+      }));
+
+      return {
+        label,
+        deviceIds,
+        totalVolumeLitres: Math.round(totalVolumeLitres * 100) / 100,
+        averageFlowRateLpm: Math.round(averageFlowRateLpm * 100) / 100,
+        minimumFlowRateLpm: Math.round(minimumFlowRateLpm * 100) / 100,
+        maximumFlowRateLpm: Math.round(maximumFlowRateLpm * 100) / 100,
+        meterMetrics: metrics,
+        intervalDataPoints,
+      };
+    };
+
+    const sideA = aggregateSide(sideALabel, deviceIdsA, sideAMetrics);
+    const sideB = aggregateSide(sideBLabel, deviceIdsB, sideBMetrics);
+
+    // Build unified, aligned interval chart dataset
+    // Collect unique interval labels preserving chronological order
+    const allLabels: string[] = [];
+    const seenLabels = new Set<string>();
+
+    sideA.intervalDataPoints.forEach((pt) => {
+      if (!seenLabels.has(pt.label)) {
+        seenLabels.add(pt.label);
+        allLabels.push(pt.label);
+      }
+    });
+    sideB.intervalDataPoints.forEach((pt) => {
+      if (!seenLabels.has(pt.label)) {
+        seenLabels.add(pt.label);
+        allLabels.push(pt.label);
+      }
+    });
+
+    const sideAMap = new Map(sideA.intervalDataPoints.map((p) => [p.label, p.litres]));
+    const sideBMap = new Map(sideB.intervalDataPoints.map((p) => [p.label, p.litres]));
+
+    const combinedChartData = allLabels.map((label) => {
+      const aLitres = sideAMap.get(label) || 0;
+      const bLitres = sideBMap.get(label) || 0;
+      return {
+        label,
+        sideALitres: Math.round(aLitres * 100) / 100,
+        sideBLitres: Math.round(bLitres * 100) / 100,
+      };
+    });
+
+    // Delta & Percent calculations
+    const deltaVolumeLitres = Math.round((sideA.totalVolumeLitres - sideB.totalVolumeLitres) * 100) / 100;
+    let deltaVolumePercent = 0;
+    if (sideB.totalVolumeLitres > 0) {
+      deltaVolumePercent = ((sideA.totalVolumeLitres - sideB.totalVolumeLitres) / sideB.totalVolumeLitres) * 100;
+    } else if (sideA.totalVolumeLitres > 0) {
+      deltaVolumePercent = 100;
+    }
+    deltaVolumePercent = Math.round(deltaVolumePercent * 10) / 10;
+
+    const deltaAvgFlowLpm = Math.round((sideA.averageFlowRateLpm - sideB.averageFlowRateLpm) * 100) / 100;
+
+    return {
+      mode,
+      timeframe: period,
+      timeframeLabel,
+      sideA,
+      sideB,
+      deltaVolumeLitres,
+      deltaVolumePercent,
+      deltaAvgFlowLpm,
+      combinedChartData,
+    };
+  }
+
+  /**
+   * Generates and downloads a CSV report of the comparison result.
+   */
+  exportComparisonCSV(result: ComparisonEngineResult): boolean {
+    if (!result) return false;
+    const { sideA, sideB, deltaVolumeLitres, deltaVolumePercent, timeframeLabel, mode, combinedChartData } = result;
+
+    const lines: string[] = [];
+    lines.push('FLOSTAT FlowMeter Enterprise Comparison Report');
+    lines.push(`Exported At (IST),"${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}"`);
+    lines.push(`Comparison Mode,"${mode}"`);
+    lines.push(`Selected Timeframe,"${timeframeLabel}"`);
+    lines.push('');
+
+    // Summary Section
+    lines.push('SUMMARY COMPARISON');
+    lines.push('Metric,Side A,Side B,Variance (Delta),Percentage Difference');
+    lines.push(`Group/Entity Name,"${sideA.label}","${sideB.label}",-,`);
+    lines.push(`Total Volume (Litres),${sideA.totalVolumeLitres},${sideB.totalVolumeLitres},${deltaVolumeLitres >= 0 ? '+' : ''}${deltaVolumeLitres},${deltaVolumePercent >= 0 ? '+' : ''}${deltaVolumePercent}%`);
+    lines.push(`Average Flow Rate (L/min),${sideA.averageFlowRateLpm},${sideB.averageFlowRateLpm},${result.deltaAvgFlowLpm >= 0 ? '+' : ''}${result.deltaAvgFlowLpm},-`);
+    lines.push(`Peak Flow Rate (L/min),${sideA.maximumFlowRateLpm},${sideB.maximumFlowRateLpm},-,`);
+    lines.push(`Device Count,${sideA.deviceIds.length},${sideB.deviceIds.length},-,`);
+    lines.push('');
+
+    // Interval Breakdown Section
+    lines.push('INTERVAL CONSUMPTION BREAKDOWN');
+    lines.push(`Interval,"${sideA.label} Volume (L)","${sideB.label} Volume (L)","Interval Variance (L)"`);
+    combinedChartData.forEach((row) => {
+      const intervalDelta = Math.round((row.sideALitres - row.sideBLitres) * 100) / 100;
+      lines.push(`"${row.label}",${row.sideALitres},${row.sideBLitres},${intervalDelta >= 0 ? '+' : ''}${intervalDelta}`);
+    });
+    lines.push('');
+
+    // Side A Meters Breakdown
+    lines.push(`SIDE A METERS BREAKDOWN (${sideA.label})`);
+    lines.push('Device ID,Device Name,Facility,Location,Status,Total Volume (L),Avg Flow (L/min),Peak Flow (L/min),Group Contribution %');
+    sideA.meterMetrics.forEach((m) => {
+      const contrib = sideA.totalVolumeLitres > 0 ? ((m.totalVolumeLitres / sideA.totalVolumeLitres) * 100).toFixed(1) : '0.0';
+      lines.push(`"${m.deviceId}","${m.deviceName}","${m.facility}","${m.location}","${m.status}",${m.totalVolumeLitres},${m.averageFlowRateLpm},${m.maximumFlowRateLpm},${contrib}%`);
+    });
+    lines.push('');
+
+    // Side B Meters Breakdown
+    lines.push(`SIDE B METERS BREAKDOWN (${sideB.label})`);
+    lines.push('Device ID,Device Name,Facility,Location,Status,Total Volume (L),Avg Flow (L/min),Peak Flow (L/min),Group Contribution %');
+    sideB.meterMetrics.forEach((m) => {
+      const contrib = sideB.totalVolumeLitres > 0 ? ((m.totalVolumeLitres / sideB.totalVolumeLitres) * 100).toFixed(1) : '0.0';
+      lines.push(`"${m.deviceId}","${m.deviceName}","${m.facility}","${m.location}","${m.status}",${m.totalVolumeLitres},${m.averageFlowRateLpm},${m.maximumFlowRateLpm},${contrib}%`);
+    });
+
+    const csvContent = lines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const cleanLabel = timeframeLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+    link.download = `flostat_comparison_${cleanLabel}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -233,9 +233,9 @@ export function Calendar({
           if (disabled) {
             cellClass += "text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50 ";
           } else if (isSelected) {
-            cellClass += "bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 scale-105 ";
+            cellClass += "bg-[#00B4D8] text-white font-bold shadow-md shadow-[#00B4D8]/20 scale-105 ";
           } else if (isCurrentToday) {
-            cellClass += "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-extrabold border border-blue-400 dark:border-blue-700 ";
+            cellClass += "bg-[#00B4D8]/10 text-[#00B4D8] font-extrabold border border-[#00B4D8]/40 ";
           } else if (dayObj.isCurrentMonth) {
             cellClass += "text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 ";
           } else {
@@ -265,7 +265,7 @@ export function Calendar({
             setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
             if (onSelect) onSelect(today);
           }}
-          className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+          className="text-[#00B4D8] font-bold hover:underline"
         >
           Today
         </button>
@@ -339,10 +339,10 @@ export function DatePicker({ id, value, onChange, label, className = '', placeho
         id={id}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold text-slate-800 dark:text-white shadow-sm hover:border-blue-400 focus:outline-none transition"
+        className="w-full flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-semibold text-slate-800 dark:text-white shadow-sm hover:border-[#00B4D8] focus:outline-none transition"
       >
         <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-blue-500" />
+          <CalendarIcon className="w-4 h-4 text-[#00B4D8]" />
           <span>{formattedDisplay}</span>
         </div>
       </button>

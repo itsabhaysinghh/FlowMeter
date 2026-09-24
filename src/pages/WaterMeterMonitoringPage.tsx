@@ -32,6 +32,7 @@ import { FlowTrendChart } from '../components/water-meter/FlowTrendChart';
 import { FlowHistoryTable } from '../components/water-meter/FlowHistoryTable';
 import { TimeRangeAnalysisView } from '../components/water-meter/TimeRangeAnalysisView';
 import { HistoricalDrillDownView } from '../components/water-meter/HistoricalDrillDownView';
+import { ComparisonModeView } from '../components/water-meter/ComparisonModeView';
 import { formatNumber } from '../utils/formatters';
 import { formatIstMonthYear, shiftIstMonth, getIstDateInputValue } from '../utils/ist';
 import { DeleteDataDialog } from '../components/water-meter/DeleteDataDialog';
@@ -51,6 +52,23 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '../components/ui/command';
+
+const DEVICE_COLOR_PALETTE = [
+  '#00B4D8', // 01 Aqua Flow
+  '#0A1F44', // 02 Deep Navy
+  '#0284C7', // 03 Sky Blue
+  '#4B5563', // 04 Slate Grey
+  '#0891B2', // 05 Cyan Dark
+  '#1E3A8A', // 06 Navy Slate
+  '#06B6D4', // 07 Cyan Bright
+  '#334155', // 08 Charcoal Slate
+  '#2563EB', // 09 Royal Blue
+  '#0F766E', // 10 Deep Teal
+  '#3B82F6', // 11 Electric Blue
+  '#64748B', // 12 Cool Slate
+  '#0369A1', // 13 Ocean Blue
+  '#1D4ED8', // 14 Deep Blue
+];
 
 export interface WaterMeterMonitoringPageProps {
   devStateOverride?: ModuleState;
@@ -115,7 +133,7 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
     return (
       <div className="flex items-center justify-center py-16 bg-slate-50/10 dark:bg-slate-900/20 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
         <div className="flex flex-col items-center gap-3">
-          <Activity className="w-6 h-6 text-blue-500 animate-pulse" />
+          <Activity className="w-6 h-6 text-[#00B4D8] animate-pulse" />
           <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
             {apiError ? 'AWS Telemetry Idle (Awaiting dynamic stream...)' : 'Connecting and streaming real-time telemetry graphs...'}
           </span>
@@ -202,8 +220,8 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
           unit="Litres"
           subtitle={`Aggregated volume for ${device.name}`}
           icon={<Droplet className="w-5 h-5" />}
-          iconBgColor="bg-blue-50 dark:bg-blue-950/50"
-          iconTextColor="text-flostat-primary dark:text-blue-400"
+          iconBgColor="bg-[#00B4D8]/10 dark:bg-[#00B4D8]/20"
+          iconTextColor="text-[#00B4D8] dark:text-[#00B4D8]"
         />
 
         <MetricCard
@@ -212,8 +230,8 @@ const DeviceInlineDashboard: React.FC<DeviceInlineDashboardProps> = ({
           unit="L/min"
           subtitle="Mean operational flow rate"
           icon={<BarChart2 className="w-5 h-5" />}
-          iconBgColor="bg-indigo-50 dark:bg-indigo-950/50"
-          iconTextColor="text-indigo-600 dark:text-indigo-400"
+          iconBgColor="bg-[#0A1F44]/10 dark:bg-[#0A1F44]/20"
+          iconTextColor="text-[#0A1F44] dark:text-slate-300"
         />
       </div>
 
@@ -371,8 +389,8 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
                   }}
                   className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer flex items-center gap-1.5 ${
                     activeTab === 'specific'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+                      ? 'bg-white dark:bg-slate-700 text-[#00B4D8] shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
                   }`}
                 >
                   <span>{activeTab === 'specific' && formattedDate ? `Specific Date (${formattedDate})` : 'Specific Date'}</span>
@@ -408,8 +426,8 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
                 onClick={() => handleTabClick('month')}
                 className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
                   activeTab === 'month'
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+                    ? 'bg-white dark:bg-slate-700 text-[#00B4D8] shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
                 }`}
               >
                 {activeTab === 'month' && formattedMonth ? `Month (${formattedMonth})` : 'Month'}
@@ -423,8 +441,8 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
               onClick={() => handleTabClick(tab.id)}
               className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/50 dark:border-slate-600/50'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-350'
+                  ? 'bg-white dark:bg-slate-700 text-[#00B4D8] shadow-sm border border-slate-200/50 dark:border-slate-600/50'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
               }`}
             >
               {tab.label}
@@ -435,14 +453,14 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
 
       {/* Month Picker */}
       {activeTab === 'month' && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span className="text-slate-500 dark:text-slate-400 font-medium text-[11px] mr-0.5">Month:</span>
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-[#00B4D8] shrink-0" />
+          <span className="text-slate-500 font-medium text-[11px] mr-0.5">Month:</span>
 
           <button
             type="button"
             onClick={() => setSelectedMonth(shiftIstMonth(selectedMonth, -1))}
-            className="p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/60 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:bg-[#00B4D8]/10 text-slate-600 hover:text-[#00B4D8] transition-colors cursor-pointer"
             title="Previous Month"
             aria-label="Previous Month"
           >
@@ -456,7 +474,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
               setSelectedMonth(`${currentYear}-${e.target.value}`);
             }}
             aria-label="Select month"
-            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-blue-100/60 dark:hover:bg-blue-900/40"
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-[#00B4D8]/10"
           >
             {[
               { value: '01', label: 'Jan' },
@@ -485,7 +503,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
               setSelectedMonth(`${e.target.value}-${currentMonth}`);
             }}
             aria-label="Select year"
-            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-blue-100/60 dark:hover:bg-blue-900/40"
+            className="bg-transparent text-slate-800 dark:text-white font-bold text-xs focus:outline-none cursor-pointer border-none py-0.5 px-1 rounded hover:bg-[#00B4D8]/10"
           >
             {years.map((y) => (
               <option key={y} value={y.toString()} className="dark:bg-slate-900 text-slate-800 dark:text-white">
@@ -497,7 +515,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
           <button
             type="button"
             onClick={() => setSelectedMonth(shiftIstMonth(selectedMonth, 1))}
-            className="p-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/60 text-slate-600 dark:text-slate-300 hover:text-blue-600 transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:bg-[#00B4D8]/10 text-slate-600 hover:text-[#00B4D8] transition-colors cursor-pointer"
             title="Next Month"
             aria-label="Next Month"
           >
@@ -508,9 +526,9 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
 
       {/* Year Picker */}
       {activeTab === 'year' && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-805 bg-blue-50/80 dark:bg-blue-950/40 text-xs font-semibold shadow-sm">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span className="text-slate-500 dark:text-slate-400 font-medium">Select Year:</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-semibold shadow-sm">
+          <Calendar className="w-3.5 h-3.5 text-[#00B4D8]" />
+          <span className="text-slate-500 font-medium">Select Year:</span>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
@@ -530,13 +548,13 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
         <div className="relative inline-block text-left shadow-sm" ref={popoverRef}>
           <button
             onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/40 text-flostat-primary dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-[#0A1F44] dark:text-[#00B4D8] text-xs font-semibold hover:bg-[#00B4D8]/10 transition-all shadow-sm cursor-pointer"
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5 text-[#00B4D8]" />
             <span>
               {formatDateLabel(customDateRange.startDate)} - {formatDateLabel(customDateRange.endDate)}
             </span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-[#00B4D8] transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isDatePickerOpen && (
@@ -577,7 +595,7 @@ const TimeFrameSelector: React.FC<TimeFrameSelectorProps> = ({
                 </div>
                 <button
                   onClick={handleApplyRange}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                  className="px-3.5 py-1.5 bg-[#00B4D8] hover:bg-[#0096B4] text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
                 >
                   Apply
                 </button>
@@ -611,6 +629,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   });
 
   const [expandedDeviceId, setExpandedDeviceId] = useState<string | null>(null);
+  const [showAllOverviewMeters, setShowAllOverviewMeters] = useState<boolean>(false);
 
   // Search, Filters & Pinning State for Devices Page
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -694,56 +713,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     localStorage.setItem('flostat_favorite_devices', JSON.stringify(favoriteDevices));
   }, [favoriteDevices]);
 
-  // Comparison mode selections
-  const [compareDevice, setCompareDevice] = useState<string>('FLOSTAT_001');
-  const [compareActiveTab, setCompareActiveTab] = useState<TimeRangeTab>('today');
-  
-  // Day Mode Inputs
-  const [compareDayA, setCompareDayA] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [compareDayB, setCompareDayB] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  });
-
-  // Week Mode Inputs (Select dates inside target weeks)
-  const [compareWeekA, setCompareWeekA] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [compareWeekB, setCompareWeekB] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-
-  // Month Mode Inputs (YYYY-MM format)
-  const [compareMonthA, setCompareMonthA] = useState<string>('2026-08');
-  const [compareMonthB, setCompareMonthB] = useState<string>('2026-07');
-
-  // Year Mode Inputs
-  const [compareYearA, setCompareYearA] = useState<number>(2026);
-  const [compareYearB, setCompareYearB] = useState<number>(2025);
-
-  // Custom Mode Inputs
-  const [compareCustomStartA, setCompareCustomStartA] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    return d.toISOString().split('T')[0];
-  });
-  const [compareCustomEndA, setCompareCustomEndA] = useState<string>(new Date().toISOString().split('T')[0]);
-  
-  const [compareCustomStartB, setCompareCustomStartB] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 13);
-    return d.toISOString().split('T')[0];
-  });
-  const [compareCustomEndB, setCompareCustomEndB] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-
-  const [compareCurrentVal, setCompareCurrentVal] = useState<number>(0);
-  const [comparePrevVal, setComparePrevVal] = useState<number>(0);
-  const [isCompareLoading, setIsCompareLoading] = useState<boolean>(false);
 
   // Date Range Popover States
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -780,20 +749,15 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   };
 
 
-  const formatDateLabel = (dateStr: string) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
-  // Fetch telemetry data for FLOSTAT_001
+  // Fetch telemetry data for the currently selected device
   const { data, refreshInterval, setRefreshInterval, refetch } = useWaterMeterData({
     activeTab,
     customDateRange,
     specificDate,
     selectedMonth,
     selectedYear,
-    selectedDevice: devices.find((d) => d.id === 'FLOSTAT_001') || selectedDevice,
+    selectedDevice: selectedDevice || devices[0] || null,
     dataRefreshToken,
     devStateOverride,
     connectedStreamData: connectedDataStream,
@@ -807,15 +771,15 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     const currentSeq = ++snapshotSeqRef.current;
 
     async function loadDeviceSnapshots() {
-      // Filter out FLOSTAT_001 since its live telemetry and consumption are already managed by the page-level useWaterMeterData hook
-      const nonPrimaryDevices = devices.filter((d) => d.id !== 'FLOSTAT_001');
+      if (devices.length === 0) return;
+      const targetDevices = devices;
       const results: Array<readonly [string, SummaryResponse | null, LiveFlowMetrics | null]> = [];
-      const concurrency = 2;
+      const concurrency = 3;
 
-      // Process devices in controlled chunks of 2 to avoid burst-throttling API Gateway
-      for (let i = 0; i < nonPrimaryDevices.length; i += concurrency) {
+      // Process devices in controlled chunks of 3 to keep all device metrics live and accurate
+      for (let i = 0; i < targetDevices.length; i += concurrency) {
         if (!active || currentSeq !== snapshotSeqRef.current) break;
-        const chunk = nonPrimaryDevices.slice(i, i + concurrency);
+        const chunk = targetDevices.slice(i, i + concurrency);
         const chunkResults = await Promise.all(
           chunk.map(async (device) => {
             const isOffline = device.status === 'offline';
@@ -873,61 +837,29 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
     return deviceSnapshots[deviceId]?.flowRate ?? 0;
   }, [deviceSnapshots]);
 
-  const flostat001Val = data?.metrics.todaysConsumption ?? getDeviceConsumption('FLOSTAT_001');
-  const flostat001Flow = data?.metrics.liveFlowRate ?? getDeviceFlowRate('FLOSTAT_001');
+  const rawPieData = React.useMemo(() => {
+    return devices.map((d, index) => {
+      const isSelected = selectedDevice?.id === d.id;
+      const snapshotConsumption = getDeviceConsumption(d.id);
+      const snapshotFlowRate = getDeviceFlowRate(d.id);
 
-  const flostat001Status = data ? data.metadata.deviceStatus : 'online';
+      const val = isSelected && data?.metrics.todaysConsumption !== undefined && data.metrics.todaysConsumption > 0
+        ? data.metrics.todaysConsumption
+        : snapshotConsumption;
+      const flow = isSelected && data?.metrics.liveFlowRate !== undefined
+        ? data.metrics.liveFlowRate
+        : snapshotFlowRate;
 
-  const deviceColors: Record<string, string> = {
-    FLOSTAT_001: '#2563EB', // Blue
-    FLOSTAT_002: '#10B981', // Green
-    FLOSTAT_003: '#F59E0B', // Orange
-    FLOSTAT_004: '#8B5CF6', // Purple (standby/offline color overlay)
-    FLOSTAT_005: '#EF4444', // Red
-  };
-
-  const rawPieData = [
-    {
-      name: 'FLOSTAT_001',
-      location: 'Main Overhead Tank',
-      value: flostat001Val,
-      flowRate: flostat001Flow,
-      status: flostat001Status,
-      color: deviceColors.FLOSTAT_001,
-    },
-    {
-      name: 'FLOSTAT_002',
-      location: 'Ground Tank',
-      value: getDeviceConsumption('FLOSTAT_002'),
-      flowRate: getDeviceFlowRate('FLOSTAT_002'),
-      status: 'online',
-      color: deviceColors.FLOSTAT_002,
-    },
-    {
-      name: 'FLOSTAT_003',
-      location: 'Block A Tank',
-      value: getDeviceConsumption('FLOSTAT_003'),
-      flowRate: getDeviceFlowRate('FLOSTAT_003'),
-      status: 'online',
-      color: deviceColors.FLOSTAT_003,
-    },
-    {
-      name: 'FLOSTAT_004',
-      location: 'Block B Tank',
-      value: getDeviceConsumption('FLOSTAT_004'),
-      flowRate: 0,
-      status: 'offline',
-      color: deviceColors.FLOSTAT_004,
-    },
-    {
-      name: 'FLOSTAT_005',
-      location: 'Fire Tank',
-      value: getDeviceConsumption('FLOSTAT_005'),
-      flowRate: getDeviceFlowRate('FLOSTAT_005'),
-      status: 'online',
-      color: deviceColors.FLOSTAT_005,
-    },
-  ];
+      return {
+        name: d.name || d.id,
+        location: d.location || 'Site Tank',
+        value: val,
+        flowRate: flow,
+        status: d.status || 'online',
+        color: DEVICE_COLOR_PALETTE[index % DEVICE_COLOR_PALETTE.length],
+      };
+    });
+  }, [devices, selectedDevice, data, getDeviceConsumption, getDeviceFlowRate]);
 
   const totalConsumption = rawPieData.reduce((sum, item) => sum + item.value, 0);
 
@@ -1033,141 +965,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
 
     return result;
   }, [devices, searchTerm, filterPill, pinnedDevices, getDeviceConsumption]);
-
-
-
-  // Helper to calculate custom period boundaries for Period A and Period B
-  const getComparisonBoundaries = React.useCallback(() => {
-    let startA = new Date();
-    let endA = new Date();
-    let startB = new Date();
-    let endB = new Date();
-
-    if (compareActiveTab === 'today') {
-      startA = new Date(compareDayA);
-      startA.setHours(0, 0, 0, 0);
-      endA = new Date(compareDayA);
-      endA.setHours(23, 59, 59, 999);
-
-      startB = new Date(compareDayB);
-      startB.setHours(0, 0, 0, 0);
-      endB = new Date(compareDayB);
-      endB.setHours(23, 59, 59, 999);
-    } else if (compareActiveTab === 'week') {
-      const dateA = new Date(compareWeekA);
-      const dayA = dateA.getDay();
-      const diffA = dateA.getDate() - dayA + (dayA === 0 ? -6 : 1);
-      startA = new Date(dateA.setDate(diffA));
-      startA.setHours(0, 0, 0, 0);
-      endA = new Date(startA);
-      endA.setDate(endA.getDate() + 6);
-      endA.setHours(23, 59, 59, 999);
-
-      const dateB = new Date(compareWeekB);
-      const dayB = dateB.getDay();
-      const diffB = dateB.getDate() - dayB + (dayB === 0 ? -6 : 1);
-      startB = new Date(dateB.setDate(diffB));
-      startB.setHours(0, 0, 0, 0);
-      endB = new Date(startB);
-      endB.setDate(endB.getDate() + 6);
-      endB.setHours(23, 59, 59, 999);
-    } else if (compareActiveTab === 'month') {
-      const [yA, mA] = compareMonthA.split('-').map(Number);
-      startA = new Date(yA, mA - 1, 1);
-      endA = new Date(yA, mA, 0, 23, 59, 59, 999);
-
-      const [yB, mB] = compareMonthB.split('-').map(Number);
-      startB = new Date(yB, mB - 1, 1);
-      endB = new Date(yB, mB, 0, 23, 59, 59, 999);
-    } else if (compareActiveTab === 'year') {
-      startA = new Date(compareYearA, 0, 1);
-      endA = new Date(compareYearA, 11, 31, 23, 59, 59, 999);
-
-      startB = new Date(compareYearB, 0, 1);
-      endB = new Date(compareYearB, 11, 31, 23, 59, 59, 999);
-    } else if (compareActiveTab === 'custom') {
-      startA = new Date(compareCustomStartA);
-      startA.setHours(0, 0, 0, 0);
-      endA = new Date(compareCustomEndA);
-      endA.setHours(23, 59, 59, 999);
-
-      startB = new Date(compareCustomStartB);
-      startB.setHours(0, 0, 0, 0);
-      endB = new Date(compareCustomEndB);
-      endB.setHours(23, 59, 59, 999);
-    }
-
-    return {
-      current: {
-        start: startA,
-        end: endA,
-        startStr: startA.toISOString().split('T')[0],
-        endStr: endA.toISOString().split('T')[0],
-      },
-      previous: {
-        start: startB,
-        end: endB,
-        startStr: startB.toISOString().split('T')[0],
-        endStr: endB.toISOString().split('T')[0],
-      }
-    };
-  }, [
-    compareActiveTab,
-    compareDayA,
-    compareDayB,
-    compareWeekA,
-    compareWeekB,
-    compareMonthA,
-    compareMonthB,
-    compareYearA,
-    compareYearB,
-    compareCustomStartA,
-    compareCustomEndA,
-    compareCustomStartB,
-    compareCustomEndB
-  ]);
-
-  // Fetch comparison data dynamically
-  React.useEffect(() => {
-    let active = true;
-    async function fetchCompareData() {
-      const dates = getComparisonBoundaries();
-      
-      try {
-        setIsCompareLoading(true);
-        const [curRes, prevRes] = await Promise.all([
-          meterService.getConsumption('custom', compareDevice, {
-            startDate: dates.current.startStr,
-            endDate: dates.current.endStr,
-          }),
-          meterService.getConsumption('custom', compareDevice, {
-            startDate: dates.previous.startStr,
-            endDate: dates.previous.endStr,
-          })
-        ]);
-        
-        if (active) {
-          setCompareCurrentVal(curRes ? curRes.total_volume_litres : 0);
-          setComparePrevVal(prevRes ? prevRes.total_volume_litres : 0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch backend comparison data:", err);
-      } finally {
-        if (active) {
-          setIsCompareLoading(false);
-        }
-      }
-    }
-    
-    fetchCompareData();
-    return () => {
-      active = false;
-    };
-  }, [compareDevice, data, getComparisonBoundaries]);
-
-  const compareDelta = compareCurrentVal - comparePrevVal;
-  const comparePct = comparePrevVal > 0 ? (compareDelta / comparePrevVal) * 100 : 0;
-
   const handleDataDeleted = (result: DeleteFlowMeterDataResult, deviceId: string) => {
     // Instantly reset local snapshot for the deleted device
     setDeviceSnapshots((prev) => ({
@@ -1206,48 +1003,50 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
           <div className="flex items-center gap-2">
             <span className="text-slate-500">Meters Status:</span>
             <GlowingBadge variant="info" pulse={false}>
-              4 Online | 1 Standby
+              {devices.filter(d => d.status === 'online').length} Online{devices.filter(d => d.status === 'offline').length > 0 ? ` | ${devices.filter(d => d.status === 'offline').length} Standby` : ''}
             </GlowingBadge>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-slate-500">
+        <div className="flex flex-wrap items-center gap-4 text-slate-500">
           <div className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-700">
+            <span className="text-slate-700 font-medium">
               {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
             </span>
           </div>
-          <span className="h-3 w-px bg-slate-200" />
+          <span className="hidden sm:inline h-4 w-px bg-slate-200" />
           <span>Last Sync: <span className="text-slate-700 font-semibold">{data ? data.metadata.lastUpdated : 'Just now'}</span></span>
-          <span className="h-3 w-px bg-slate-200" />
           {data && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Refresh:</span>
-              <div className="relative inline-block text-left">
-                <select
-                  value={refreshInterval}
-                  onChange={(e) => setRefreshInterval(parseInt(e.target.value, 10))}
-                  className="appearance-none pr-7 pl-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all focus:outline-none cursor-pointer"
-                  title="Auto Refresh Settings"
-                >
-                  <option value={5000}>5s</option>
-                  <option value={10000}>10s</option>
-                  <option value={30000}>30s</option>
-                  <option value={60000}>1m</option>
-                  <option value={300000}>5m</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
-                  <ChevronDown className="w-3 h-3" />
+            <>
+              <span className="hidden sm:inline h-4 w-px bg-slate-200" />
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Refresh:</span>
+                <div className="relative inline-block text-left">
+                  <select
+                    value={refreshInterval}
+                    onChange={(e) => setRefreshInterval(parseInt(e.target.value, 10))}
+                    className="appearance-none pr-7 pl-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all focus:outline-none cursor-pointer"
+                    title="Auto Refresh Settings"
+                  >
+                    <option value={5000}>5s</option>
+                    <option value={10000}>10s</option>
+                    <option value={30000}>30s</option>
+                    <option value={60000}>1m</option>
+                    <option value={300000}>5m</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
+                    <ChevronDown className="w-3 h-3" />
+                  </div>
                 </div>
+                <RefreshButton
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => refetch()}
+                  title="Refresh Now"
+                />
               </div>
-              <RefreshButton
-                variant="outline"
-                size="icon-sm"
-                onClick={() => refetch()}
-                title="Refresh Now"
-              />
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -1283,7 +1082,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                 localStorage.setItem('flostat_meter_status_alert_dismissed', 'true');
               }}
             >
-              <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-[#00B4D8] shrink-0 mt-0.5" />
               <div>
                 <AlertTitle>Meter status</AlertTitle>
                 <AlertDescription>
@@ -1324,7 +1123,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               onClick={() => setActiveNav('overview')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeNav === 'overview'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -1336,7 +1135,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               onClick={() => setActiveNav('devices')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeNav === 'devices'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -1346,7 +1145,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
                 activeNav === 'devices'
-                  ? 'bg-blue-700 text-blue-100'
+                  ? 'bg-[#0096B4] text-white'
                   : 'bg-slate-100 text-slate-650'
               }`}>
                 {devices.length}
@@ -1357,7 +1156,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               onClick={() => setActiveNav('compare')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeNav === 'compare'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -1369,7 +1168,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               onClick={() => setActiveNav('timerange')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeNav === 'timerange'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -1381,7 +1180,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               onClick={() => setActiveNav('drilldown')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeNav === 'drilldown'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -1439,14 +1238,14 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                 
                 {/* Left Column: Donut Chart */}
-                <div className="lg:col-span-5 bg-white border border-slate-200 p-5 rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col justify-between">
+                <div className="lg:col-span-5 bg-white border border-slate-200 p-5 rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col">
                   <div>
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Consumption Allocation</h3>
                     <p className="text-[10px] text-slate-500 dark:text-dark-muted mt-0.5">Device percentage share of aggregate volume</p>
                   </div>
                   
-                  <div className="flex flex-col items-center justify-center py-4">
-                    <PieChart data={pieChartData} size={250} innerRadius={65} padAngle={0.04}>
+                  <div className="flex flex-col items-center justify-center pt-2 pb-1 flex-1">
+                    <PieChart data={pieChartData} size={230} innerRadius={60} padAngle={0.04}>
                       {pieChartData.map((_, index) => (
                         <PieSlice
                           key={index}
@@ -1489,28 +1288,35 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       </PieCenter>
                     </PieChart>
 
-                    <Legend className="mt-4" />
+                    <Legend className="mt-3" />
                   </div>
                 </div>
 
                 {/* Right Column: Device Summary Table */}
                 <div className="lg:col-span-7 bg-white border border-slate-200 p-5 rounded-xl shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meters Inventory Breakdown</h3>
-                    <p className="text-[10px] text-slate-500 dark:text-dark-muted mt-0.5">Real-time status metrics and total flow volume</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Meters Inventory Breakdown</h3>
+                        <p className="text-[10px] text-slate-500 dark:text-dark-muted mt-0.5">Real-time status metrics and total flow volume</p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        {pieData.length} Meters
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="overflow-x-auto w-full flex-1 mt-4">
+                  <div className="overflow-x-auto w-full flex-1 mt-3">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                          <th className="pb-3 pl-2">Device Name</th>
-                          <th className="pb-3 text-right">Consumption</th>
-                          <th className="pb-3 pr-2 text-right">Percentage Share</th>
+                          <th className="pb-2.5 pl-2">Device Name</th>
+                          <th className="pb-2.5 text-right">Consumption</th>
+                          <th className="pb-2.5 pr-2 text-right">Percentage Share</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
-                        {pieData.map((device) => (
+                        {(showAllOverviewMeters ? pieData : pieData.slice(0, 5)).map((device) => (
                           <tr 
                             key={device.name} 
                             onClick={() => {
@@ -1522,23 +1328,45 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                             }}
                             className="hover:bg-slate-100/50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer"
                           >
-                            <td className="py-3.5 pl-2 flex items-center gap-2.5">
+                            <td className="py-2.5 pl-2 flex items-center gap-2.5">
                               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: device.color }} />
                               <div className="flex flex-col">
                                 <span className="font-bold text-slate-800 dark:text-slate-200">{device.name}</span>
                                 <span className="text-[10px] text-slate-400 dark:text-slate-500">{device.location}</span>
                               </div>
                             </td>
-                            <td className="py-3.5 text-right font-semibold text-slate-800 dark:text-slate-200">
+                            <td className="py-2.5 text-right font-semibold text-slate-800 dark:text-slate-200">
                               {formatNumber(device.value, 0)} L
                             </td>
-                            <td className="py-3.5 pr-2 text-right font-semibold text-slate-600 dark:text-slate-400">
+                            <td className="py-2.5 pr-2 text-right font-semibold text-slate-600 dark:text-slate-400">
                               {device.percentage.toFixed(1)}%
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Expand / View All Meters Action Bar */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between mt-2">
+                    {pieData.length > 5 ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllOverviewMeters(!showAllOverviewMeters)}
+                        className="text-xs font-bold text-[#00B4D8] hover:text-[#0096B4] transition cursor-pointer flex items-center gap-1 py-1 px-2 rounded-lg hover:bg-[#00B4D8]/10"
+                      >
+                        {showAllOverviewMeters ? 'Show Top 5 Meters' : `View All Meters (${pieData.length})`}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400">Showing all {pieData.length} meters</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setActiveNav('devices')}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                    >
+                      Open Meters Catalog →
+                    </button>
                   </div>
                 </div>
 
@@ -1619,7 +1447,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     {filteredAndSortedDevices.length > 0 && (
-                      <InputGroupAddon align="inline-end" className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                      <InputGroupAddon align="inline-end" className="text-[10px] font-bold text-[#00B4D8]">
                         {filteredAndSortedDevices.length} results
                       </InputGroupAddon>
                     )}
@@ -1685,7 +1513,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     onClick={() => setFilterPill(pill)}
                     className={`px-3 py-1 rounded-full border transition-all cursor-pointer capitalize ${
                       filterPill === pill
-                        ? 'bg-slate-900 border-slate-800 text-white dark:bg-slate-800 dark:border-slate-700'
+                        ? 'bg-[#0A1F44] border-[#0A1F44] text-white shadow-xs'
                         : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-dark-card dark:hover:bg-slate-800/80 dark:text-slate-400'
                     }`}
                   >
@@ -1739,10 +1567,10 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                                       e.stopPropagation();
                                       togglePin(device.id);
                                     }}
-                                    className="p-1 rounded text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                                    className="p-1 rounded text-slate-400 hover:text-[#00B4D8] transition-colors cursor-pointer"
                                     title={isPinned ? 'Unpin Device' : 'Pin Device'}
                                   >
-                                    <Pin className={`w-3.5 h-3.5 ${isPinned ? 'text-blue-600 dark:text-blue-400 rotate-45 fill-current' : 'opacity-40 group-hover:opacity-100'}`} />
+                                    <Pin className={`w-3.5 h-3.5 ${isPinned ? 'text-[#00B4D8] rotate-45 fill-current' : 'opacity-40 group-hover:opacity-100'}`} />
                                   </button>
                                 </td>
 
@@ -1763,7 +1591,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                                 {/* Device ID */}
                                 <td 
                                   onClick={() => toggleDeviceExpand(device.id, device)}
-                                  className="py-4 px-4 font-bold text-slate-900 dark:text-white group-hover:text-flostat-primary dark:group-hover:text-blue-400 transition-colors"
+                                  className="py-4 px-4 font-bold text-slate-900 dark:text-white group-hover:text-[#00B4D8] transition-colors"
                                 >
                                   {device.name}
                                 </td>
@@ -1856,225 +1684,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
             </div>
           )}
 
-          {/* VIEW 3: Comparison Mode View */}
+          {/* VIEW 3: Enterprise Comparison Engine View */}
           {activeNav === 'compare' && (
-            <div className="space-y-6">
-              
-              {/* Header */}
-              <div className="pb-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-bold text-slate-800 tracking-tight">Enterprise Comparison Engine</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Analyze single device water consumption trends compared to any other past time period.
-                  </p>
-                </div>
-                
-                {/* Active Period Tab Switcher */}
-                <div className="flex items-center p-1 bg-slate-100/85 rounded-lg border border-slate-200 shrink-0">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setCompareActiveTab(tab.id)}
-                      className={`px-3 py-1 text-xs font-bold rounded transition-all capitalize cursor-pointer ${
-                        compareActiveTab === tab.id
-                          ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {(() => {
-                const selectedDevObj = devices.find((d) => d.id === compareDevice) || devices[0];
-                
-                const curPeriodLabel = 
-                  compareActiveTab === 'today' ? `Day A: ${formatDateLabel(compareDayA)}` :
-                  compareActiveTab === 'week' ? `Week A: w/c ${formatDateLabel(compareWeekA)}` :
-                  compareActiveTab === 'month' ? `Month A: ${compareMonthA}` :
-                  compareActiveTab === 'year' ? `Year A: ${compareYearA}` : 
-                  `Range A: ${formatDateLabel(compareCustomStartA)} - ${formatDateLabel(compareCustomEndA)}`;
-                  
-                const prevPeriodLabel = 
-                  compareActiveTab === 'today' ? `Day B: ${formatDateLabel(compareDayB)}` :
-                  compareActiveTab === 'week' ? `Week B: w/c ${formatDateLabel(compareWeekB)}` :
-                  compareActiveTab === 'month' ? `Month B: ${compareMonthB}` :
-                  compareActiveTab === 'year' ? `Year B: ${compareYearB}` : 
-                  `Range B: ${formatDateLabel(compareCustomStartB)} - ${formatDateLabel(compareCustomEndB)}`;
-                  
-                return (
-                  <>
-                    {/* Selector Panels: Device & Comparison Parameters */}
-                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
-                      
-                      {/* Device Selection */}
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Meter Device</label>
-                        <button
-                          type="button"
-                          onClick={() => setIsCommandOpen(true)}
-                          className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-semibold shadow-sm hover:border-blue-500 transition-all cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Server className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                            <span className="truncate">{selectedDevObj.name} — {selectedDevObj.location}</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0 pl-1">
-                            <CommandShortcut className="hidden sm:inline-block">⌘K</CommandShortcut>
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                          </div>
-                        </button>
-                      </div>
-
-                      {/* Period A Selector */}
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Reference Period (A)</label>
-                        {compareActiveTab === 'today' && (
-                          <DatePicker
-                            value={compareDayA}
-                            onChange={setCompareDayA}
-                          />
-                        )}
-                        {compareActiveTab === 'week' && (
-                          <div className="space-y-1">
-                            <DatePicker
-                              value={compareWeekA}
-                              onChange={setCompareWeekA}
-                            />
-                            <p className="text-[9px] text-slate-400">Week containing selected date</p>
-                          </div>
-                        )}
-                        {compareActiveTab === 'month' && (
-                          <input
-                            type="month"
-                            value={compareMonthA}
-                            onChange={(e) => setCompareMonthA(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
-                          />
-                        )}
-                        {compareActiveTab === 'year' && (
-                          <select
-                            value={compareYearA}
-                            onChange={(e) => setCompareYearA(Number(e.target.value))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
-                          >
-                            {[2026, 2025, 2024, 2023, 2022].map(y => (
-                              <option key={y} value={y}>{y}</option>
-                            ))}
-                          </select>
-                        )}
-                        {compareActiveTab === 'custom' && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <DatePicker
-                              value={compareCustomStartA}
-                              onChange={setCompareCustomStartA}
-                            />
-                            <DatePicker
-                              value={compareCustomEndA}
-                              onChange={setCompareCustomEndA}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Period B Selector */}
-                      <div className="space-y-2">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Comparison Period (B)</label>
-                        {compareActiveTab === 'today' && (
-                          <DatePicker
-                            value={compareDayB}
-                            onChange={setCompareDayB}
-                          />
-                        )}
-                        {compareActiveTab === 'week' && (
-                          <div className="space-y-1">
-                            <DatePicker
-                              value={compareWeekB}
-                              onChange={setCompareWeekB}
-                            />
-                            <p className="text-[9px] text-slate-400">Week containing selected date</p>
-                          </div>
-                        )}
-                        {compareActiveTab === 'month' && (
-                          <input
-                            type="month"
-                            value={compareMonthB}
-                            onChange={(e) => setCompareMonthB(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
-                          />
-                        )}
-                        {compareActiveTab === 'year' && (
-                          <select
-                            value={compareYearB}
-                            onChange={(e) => setCompareYearB(Number(e.target.value))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer"
-                          >
-                            {[2026, 2025, 2024, 2023, 2022].map(y => (
-                              <option key={y} value={y}>{y}</option>
-                            ))}
-                          </select>
-                        )}
-                        {compareActiveTab === 'custom' && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <DatePicker
-                              value={compareCustomStartB}
-                              onChange={setCompareCustomStartB}
-                            />
-                            <DatePicker
-                              value={compareCustomEndB}
-                              onChange={setCompareCustomEndB}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                    </div>
-
-                    {/* Loader overlay or status */}
-                    {isCompareLoading && (
-                      <div className="py-2 text-center text-xs text-blue-600 font-bold animate-pulse">
-                        Querying AWS database for historical telemetry log volumes...
-                      </div>
-                    )}
-
-                    {/* delta & Variance Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                      
-                      {/* Current Period Card */}
-                      <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{curPeriodLabel}</span>
-                        <div className="text-2xl font-black text-slate-900">{formatNumber(compareCurrentVal, 0)} L</div>
-                        <span className="text-[10px] text-slate-400">Location: {selectedDevObj.location}</span>
-                      </div>
-
-                      {/* Previous Period Card */}
-                      <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{prevPeriodLabel}</span>
-                        <div className="text-2xl font-black text-slate-900">{formatNumber(comparePrevVal, 0)} L</div>
-                        <span className="text-[10px] text-slate-400">Location: {selectedDevObj.location}</span>
-                      </div>
-
-                      {/* Variance Card */}
-                      <div className="p-5 bg-white border border-slate-200 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Variance Comparison</span>
-                        <div className={`text-2xl font-black ${compareDelta >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {compareDelta >= 0 ? '+' : ''}{formatNumber(compareDelta, 0)} L
-                        </div>
-                        <span className={`text-[10px] font-bold ${compareDelta >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                          {compareDelta >= 0 ? '▲' : '▼'} {comparePct.toFixed(1)}% delta variance
-                        </span>
-                      </div>
-
-                    </div>
-
-
-                  </>
-                );
-              })()}
-
-            </div>
+            <ComparisonModeView
+              devices={devices}
+              initialDeviceId={selectedDevice?.id}
+            />
           )}
 
           {/* VIEW 4: Custom Historical Time-Range Flow Analysis */}
@@ -2122,11 +1737,10 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     <CommandItem
                       key={d.id}
                       onSelect={() => {
-                        setCompareDevice(d.id);
                         onDeviceChange?.(d);
                         setIsCommandOpen(false);
                       }}
-                      className={compareDevice === d.id ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold' : ''}
+                      className={selectedDevice?.id === d.id ? 'bg-[#00B4D8]/10 text-[#0A1F44] font-bold' : ''}
                     >
                       <Server className={`w-4 h-4 shrink-0 ${d.status === 'online' ? 'text-emerald-500' : 'text-slate-400'}`} />
                       <div className="flex flex-col min-w-0 flex-1">
@@ -2140,12 +1754,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                 <CommandSeparator />
                 <CommandGroup heading="Quick Dashboard Navigation">
                   <CommandItem onSelect={() => { setActiveNav('overview'); setIsCommandOpen(false); }}>
-                    <LayoutDashboard className="w-4 h-4 text-blue-500 shrink-0" />
+                    <LayoutDashboard className="w-4 h-4 text-[#00B4D8] shrink-0" />
                     <span>Overview Dashboard</span>
                     <CommandShortcut>⌘1</CommandShortcut>
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('devices'); setIsCommandOpen(false); }}>
-                    <Server className="w-4 h-4 text-purple-500 shrink-0" />
+                    <Server className="w-4 h-4 text-[#0A1F44] dark:text-slate-300 shrink-0" />
                     <span>Meters Catalog</span>
                     <CommandShortcut>⌘2</CommandShortcut>
                   </CommandItem>
@@ -2155,12 +1769,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                     <CommandShortcut>⌘3</CommandShortcut>
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('timerange'); setIsCommandOpen(false); }}>
-                    <Clock className="w-4 h-4 text-cyan-500 shrink-0" />
+                    <Clock className="w-4 h-4 text-[#00B4D8] shrink-0" />
                     <span>Time-Range Analysis</span>
                     <CommandShortcut>⌘4</CommandShortcut>
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('drilldown'); setIsCommandOpen(false); }}>
-                    <Layers className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <Layers className="w-4 h-4 text-[#0A1F44] dark:text-slate-300 shrink-0" />
                     <span>Historical Drill-Down</span>
                     <CommandShortcut>⌘5</CommandShortcut>
                   </CommandItem>

@@ -18,7 +18,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-dark-card border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl shadow-flostat my-6 min-h-[380px]">
       {/* Enterprise SVG Vector Illustration */}
       <div className="relative mb-6">
-        <div className="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-800 flex items-center justify-center text-flostat-primary dark:text-blue-400">
+        <div className="w-20 h-20 rounded-full bg-[#00B4D8]/10 dark:bg-[#00B4D8]/20 border border-[#00B4D8]/30 dark:border-[#00B4D8]/40 flex items-center justify-center text-[#00B4D8]">
           <Radio className="w-10 h-10 animate-pulse" />
         </div>
         <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-700 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
@@ -37,7 +37,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <button
           onClick={onRetry}
           disabled={isRetrying}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-flostat-primary hover:bg-flostat-primary-hover text-white font-semibold text-sm transition-all shadow-md active:scale-95 disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00B4D8] hover:bg-[#0096B4] text-white font-semibold text-sm transition-all shadow-md shadow-[#00B4D8]/20 active:scale-95 disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />
           {isRetrying ? 'Checking Connection...' : 'Poll Stream Status'}

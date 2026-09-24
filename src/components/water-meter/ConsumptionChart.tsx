@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-4">
             <span className="text-slate-400">Consumption:</span>
-            <span className="font-extrabold text-blue-400 text-sm tracking-tight">
+            <span className="font-extrabold text-[#00B4D8] text-sm tracking-tight">
               {formatNumber(val, 0)} L
             </span>
           </div>
@@ -47,8 +47,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                 isPeak
-                  ? 'bg-amber-950/60 text-amber-400 border-amber-800/60'
-                  : 'bg-blue-950/60 text-blue-400 border-blue-800/60'
+                  ? 'bg-[#0A1F44]/60 text-[#00B4D8] border-[#00B4D8]/30'
+                  : 'bg-[#00B4D8]/10 text-[#00B4D8] border-[#00B4D8]/30'
               }`}
             >
               {isPeak ? 'Peak Usage' : 'Normal'}
@@ -273,12 +273,12 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
         >
           <defs>
             <linearGradient id="barBlueGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity={1} />
-              <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.9} />
+              <stop offset="0%" stopColor="#00B4D8" stopOpacity={1} />
+              <stop offset="100%" stopColor="#0096B4" stopOpacity={0.9} />
             </linearGradient>
             <linearGradient id="barOrangeGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F97316" stopOpacity={1} />
-              <stop offset="100%" stopColor="#D97706" stopOpacity={0.9} />
+              <stop offset="0%" stopColor="#0A1F44" stopOpacity={1} />
+              <stop offset="100%" stopColor="#162F5E" stopOpacity={0.9} />
             </linearGradient>
           </defs>
 
@@ -292,13 +292,13 @@ export const ConsumptionChart: React.FC<ConsumptionChartProps> = ({
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
             dy={8}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
             tickFormatter={(val) => `${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
           />
           <Tooltip

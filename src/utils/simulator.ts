@@ -12,28 +12,31 @@ function seededNoise(seed: string): number {
 export function generateSimulatedFlowRate(deviceId: string, timestamp: number = Math.floor(Date.now() / 1000)): number {
   const date = new Date((timestamp + 5.5 * 60 * 60) * 1000);
   const hour = date.getUTCHours();
-  const minute = date.getUTCMinutes();
   const noise = 0.88 + seededNoise(`${deviceId}:${timestamp}`) * 0.24;
 
   let base = 12.5;
-  if (deviceId === 'FLOSTAT_001') {
-    const rushHour = (hour >= 6 && hour < 10) || (hour >= 17 && hour < 21);
-    const overnight = hour < 5 || hour >= 23;
-    base = rushHour ? 28.5 : overnight ? 3.2 : 14.8;
-  } else if (deviceId === 'FLOSTAT_002') {
-    const rushHour = (hour >= 6 && hour < 10) || (hour >= 17 && hour < 21);
-    const overnight = hour < 5 || hour >= 23;
-    base = rushHour ? 23 : overnight ? 2.5 : 11.5;
-  } else if (deviceId === 'FLOSTAT_003') {
-    const buildingHours = hour >= 7 && hour < 19;
-    base = buildingHours ? 17 : 1.2;
-    if ([8, 10, 13, 16].includes(hour) && minute < 15) base *= 1.45;
-  } else if (deviceId === 'FLOSTAT_004') {
-    base = hour >= 9 && hour < 17 ? 8.5 : 0.7;
-  } else if (deviceId === 'FLOSTAT_005') {
-    const inspection = hour === 10 && minute < 20;
-    base = inspection ? 46 : 0.05;
-  }
+  const devNum = parseInt(deviceId.replace('FLOSTAT_', ''), 10) || 1;
+  const rushHour = (hour >= 6 && hour < 10) || (hour >= 17 && hour < 21);
+  const overnight = hour < 5 || hour >= 23;
+  const baseRates: Record<string, number> = {
+    FLOSTAT_001: 28.5,
+    FLOSTAT_002: 20.0,
+    FLOSTAT_003: 22.0,
+    FLOSTAT_004: 24.0,
+    FLOSTAT_005: 26.0,
+    FLOSTAT_006: 28.0,
+    FLOSTAT_007: 30.0,
+    FLOSTAT_008: 32.0,
+    FLOSTAT_009: 34.0,
+    FLOSTAT_010: 36.0,
+    FLOSTAT_011: 38.0,
+    FLOSTAT_012: 40.0,
+    FLOSTAT_013: 42.0,
+    FLOSTAT_014: 44.0,
+  };
+
+  const devBase = baseRates[deviceId] || (15 + devNum * 2);
+  base = rushHour ? devBase * 1.3 : overnight ? devBase * 0.6 : devBase;
 
   return Number((base * noise).toFixed(1));
 }
@@ -65,14 +68,8 @@ export function generateFallbackTelemetry(deviceId: string, _period: TimeRangeTa
     });
   }
 
-  const deviceBaselines: Record<string, number> = {
-    FLOSTAT_001: 165.4,
-    FLOSTAT_002: 61.4,
-    FLOSTAT_003: 45.6,
-    FLOSTAT_004: 18.2,
-    FLOSTAT_005: 8.5,
-  };
-  const baseline = deviceBaselines[deviceId] || 50.0;
+  const devNum = parseInt(deviceId.replace('FLOSTAT_', ''), 10) || 1;
+  const baseline = 20.0 + devNum * 5.0;
   const todaysConsumption = Number(Math.max(totalVolume, baseline).toFixed(1));
 
   // Generate 1-minute flow trend

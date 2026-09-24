@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "backend": "node backend/server.js",
+    "backend": "node --env-file=.env backend/server.js",
     "simulator": "node simulator/flow-meter-simulator.js",
     "test:backend": "node --test tests/backend.integration.test.js",
     "build": "tsc -b && vite build",

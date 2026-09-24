@@ -3,6 +3,15 @@ export const SIMULATED_DEVICES = Object.freeze([
   'FLOSTAT_003',
   'FLOSTAT_004',
   'FLOSTAT_005',
+  'FLOSTAT_006',
+  'FLOSTAT_007',
+  'FLOSTAT_008',
+  'FLOSTAT_009',
+  'FLOSTAT_010',
+  'FLOSTAT_011',
+  'FLOSTAT_012',
+  'FLOSTAT_013',
+  'FLOSTAT_014',
 ]);
 
 export const PROTECTED_DEVICE = 'FLOSTAT_001';

@@ -8,7 +8,7 @@ export interface InputGroupProps extends React.HTMLAttributes<HTMLDivElement> {
 export function InputGroup({ className = '', children, ...props }: InputGroupProps) {
   return (
     <div
-      className={`relative flex items-center w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all overflow-hidden ${className}`}
+      className={`relative flex items-center w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-[#00B4D8] focus-within:ring-2 focus-within:ring-[#00B4D8]/20 transition-all overflow-hidden ${className}`}
       {...props}
     >
       {children}

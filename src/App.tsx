@@ -17,47 +17,24 @@ export function App() {
         setIsLoadingDevices(true);
         const apiDevices = await meterService.getAvailableDevices(true);
         if (active) {
-          const flostat001FromApi = apiDevices?.find((d) => d.id === 'FLOSTAT_001');
-          
-          const deviceList: DeviceOption[] = [
-            {
-              id: 'FLOSTAT_001',
-              name: 'FLOSTAT_001',
-              facility: flostat001FromApi?.facility || 'Default Site',
-              status: flostat001FromApi?.status || 'online',
-              location: 'Main Overhead Tank',
-              lastSeen: flostat001FromApi?.lastSeen,
-            },
-            {
-              id: 'FLOSTAT_002',
-              name: 'FLOSTAT_002',
-              facility: 'Default Site',
-              status: 'online',
-              location: 'Ground Tank',
-            },
-            {
-              id: 'FLOSTAT_003',
-              name: 'FLOSTAT_003',
-              facility: 'Default Site',
-              status: 'online',
-              location: 'Block A Tank',
-            },
-            {
-              id: 'FLOSTAT_004',
-              name: 'FLOSTAT_004',
-              facility: 'Default Site',
-              status: 'offline',
-              location: 'Block B Tank',
-            },
-            {
-              id: 'FLOSTAT_005',
-              name: 'FLOSTAT_005',
-              facility: 'Default Site',
-              status: 'online',
-              location: 'Fire Tank',
-            },
+          const defaultFallbackList: DeviceOption[] = [
+            { id: 'FLOSTAT_001', name: 'FLOSTAT_001', facility: 'Default Site', status: 'online', location: 'Main Facility • Main Overhead Tank' },
+            { id: 'FLOSTAT_002', name: 'FLOSTAT_002', facility: 'Default Site', status: 'online', location: 'Utility Block • Ground Tank' },
+            { id: 'FLOSTAT_003', name: 'FLOSTAT_003', facility: 'Default Site', status: 'online', location: 'Building A • Block A Tank' },
+            { id: 'FLOSTAT_004', name: 'FLOSTAT_004', facility: 'Default Site', status: 'offline', location: 'Building B • Block B Tank' },
+            { id: 'FLOSTAT_005', name: 'FLOSTAT_005', facility: 'Default Site', status: 'online', location: 'Plant Facility • Fire Hydrant Tank' },
+            { id: 'FLOSTAT_006', name: 'FLOSTAT_006', facility: 'Default Site', status: 'online', location: 'Plant Facility • Cooling Tower Tank' },
+            { id: 'FLOSTAT_007', name: 'FLOSTAT_007', facility: 'Default Site', status: 'online', location: 'Plant Facility • RO Plant Tank' },
+            { id: 'FLOSTAT_008', name: 'FLOSTAT_008', facility: 'Default Site', status: 'online', location: 'Plant Facility • Commercial Block Tank' },
+            { id: 'FLOSTAT_009', name: 'FLOSTAT_009', facility: 'Default Site', status: 'online', location: 'Plant Facility • Residential Feed Tank' },
+            { id: 'FLOSTAT_010', name: 'FLOSTAT_010', facility: 'Default Site', status: 'online', location: 'Plant Facility • HVAC Chiller Tank' },
+            { id: 'FLOSTAT_011', name: 'FLOSTAT_011', facility: 'Default Site', status: 'online', location: 'Plant Facility • Industrial Inflow Tank' },
+            { id: 'FLOSTAT_012', name: 'FLOSTAT_012', facility: 'Default Site', status: 'online', location: 'Plant Facility • Utility Reserve Tank' },
+            { id: 'FLOSTAT_013', name: 'FLOSTAT_013', facility: 'Default Site', status: 'online', location: 'Plant Facility • Process Water Tank' },
+            { id: 'FLOSTAT_014', name: 'FLOSTAT_014', facility: 'Default Site', status: 'online', location: 'Plant Facility • Secondary Storage Tank' },
           ];
-          
+
+          const deviceList = apiDevices && apiDevices.length > 0 ? apiDevices : defaultFallbackList;
           const savedDeviceId = localStorage.getItem('flostat_selected_device_id');
           const restoredDevice = savedDeviceId ? deviceList.find((d) => d.id === savedDeviceId) || deviceList[0] : deviceList[0];
 
@@ -68,11 +45,20 @@ export function App() {
         console.error('Failed to load devices:', err);
         if (active) {
           const fallbackList: DeviceOption[] = [
-            { id: 'FLOSTAT_001', name: 'FLOSTAT_001', facility: 'Default Site', status: 'online', location: 'Main Overhead Tank' },
-            { id: 'FLOSTAT_002', name: 'FLOSTAT_002', facility: 'Default Site', status: 'online', location: 'Ground Tank' },
-            { id: 'FLOSTAT_003', name: 'FLOSTAT_003', facility: 'Default Site', status: 'online', location: 'Block A Tank' },
-            { id: 'FLOSTAT_004', name: 'FLOSTAT_004', facility: 'Default Site', status: 'offline', location: 'Block B Tank' },
-            { id: 'FLOSTAT_005', name: 'FLOSTAT_005', facility: 'Default Site', status: 'online', location: 'Fire Tank' },
+            { id: 'FLOSTAT_001', name: 'FLOSTAT_001', facility: 'Default Site', status: 'online', location: 'Main Facility • Main Overhead Tank' },
+            { id: 'FLOSTAT_002', name: 'FLOSTAT_002', facility: 'Default Site', status: 'online', location: 'Utility Block • Ground Tank' },
+            { id: 'FLOSTAT_003', name: 'FLOSTAT_003', facility: 'Default Site', status: 'online', location: 'Building A • Block A Tank' },
+            { id: 'FLOSTAT_004', name: 'FLOSTAT_004', facility: 'Default Site', status: 'offline', location: 'Building B • Block B Tank' },
+            { id: 'FLOSTAT_005', name: 'FLOSTAT_005', facility: 'Default Site', status: 'online', location: 'Plant Facility • Fire Hydrant Tank' },
+            { id: 'FLOSTAT_006', name: 'FLOSTAT_006', facility: 'Default Site', status: 'online', location: 'Plant Facility • Cooling Tower Tank' },
+            { id: 'FLOSTAT_007', name: 'FLOSTAT_007', facility: 'Default Site', status: 'online', location: 'Plant Facility • RO Plant Tank' },
+            { id: 'FLOSTAT_008', name: 'FLOSTAT_008', facility: 'Default Site', status: 'online', location: 'Plant Facility • Commercial Block Tank' },
+            { id: 'FLOSTAT_009', name: 'FLOSTAT_009', facility: 'Default Site', status: 'online', location: 'Plant Facility • Residential Feed Tank' },
+            { id: 'FLOSTAT_010', name: 'FLOSTAT_010', facility: 'Default Site', status: 'online', location: 'Plant Facility • HVAC Chiller Tank' },
+            { id: 'FLOSTAT_011', name: 'FLOSTAT_011', facility: 'Default Site', status: 'online', location: 'Plant Facility • Industrial Inflow Tank' },
+            { id: 'FLOSTAT_012', name: 'FLOSTAT_012', facility: 'Default Site', status: 'online', location: 'Plant Facility • Utility Reserve Tank' },
+            { id: 'FLOSTAT_013', name: 'FLOSTAT_013', facility: 'Default Site', status: 'online', location: 'Plant Facility • Process Water Tank' },
+            { id: 'FLOSTAT_014', name: 'FLOSTAT_014', facility: 'Default Site', status: 'online', location: 'Plant Facility • Secondary Storage Tank' },
           ];
           const savedDeviceId = localStorage.getItem('flostat_selected_device_id');
           const restoredDevice = savedDeviceId ? fallbackList.find((d) => d.id === savedDeviceId) || fallbackList[0] : fallbackList[0];

@@ -158,3 +158,62 @@ export interface DrillDownSummary {
   rawRecords?: FlowHistoryRecord[];
 }
 
+export type ComparisonModeType = 'device-to-device' | 'multi-device' | 'block-to-block';
+
+export interface ComparisonBlock {
+  id: string;
+  name: string;
+  description?: string;
+  deviceIds: string[];
+  color?: string;
+  isDefault?: boolean;
+}
+
+export interface MeterComparisonMetric {
+  deviceId: string;
+  deviceName: string;
+  facility: string;
+  location: string;
+  status: DeviceStatus;
+  totalVolumeLitres: number;
+  averageFlowRateLpm: number;
+  minimumFlowRateLpm: number;
+  maximumFlowRateLpm: number;
+  readingCount?: number;
+  consumptionChart: ConsumptionDataPoint[];
+  flowTrendChart: FlowTrendDataPoint[];
+}
+
+export interface ComparisonSideAggregate {
+  label: string;
+  deviceIds: string[];
+  totalVolumeLitres: number;
+  averageFlowRateLpm: number;
+  minimumFlowRateLpm: number;
+  maximumFlowRateLpm: number;
+  meterMetrics: MeterComparisonMetric[];
+  intervalDataPoints: {
+    label: string;
+    litres: number;
+    avgFlowRate?: number;
+  }[];
+}
+
+export interface ComparisonEngineResult {
+  mode: ComparisonModeType;
+  timeframe: TimeRangeTab;
+  timeframeLabel: string;
+  sideA: ComparisonSideAggregate;
+  sideB: ComparisonSideAggregate;
+  deltaVolumeLitres: number;
+  deltaVolumePercent: number;
+  deltaAvgFlowLpm: number;
+  combinedChartData: {
+    label: string;
+    sideALitres: number;
+    sideBLitres: number;
+    sideAFlowRate?: number;
+    sideBFlowRate?: number;
+  }[];
+}
+

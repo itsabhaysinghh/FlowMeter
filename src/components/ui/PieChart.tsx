@@ -95,13 +95,20 @@ function describeArc(
 }
 
 const DEFAULT_PALETTE = [
-  '#0ea5e9',
-  '#a855f7',
-  '#f59e0b',
-  '#10b981',
-  '#ef4444',
-  '#ec4899',
-  '#6366f1',
+  '#00B4D8',
+  '#0A1F44',
+  '#0284C7',
+  '#4B5563',
+  '#0891B2',
+  '#1E3A8A',
+  '#06B6D4',
+  '#334155',
+  '#2563EB',
+  '#0F766E',
+  '#3B82F6',
+  '#64748B',
+  '#0369A1',
+  '#1D4ED8',
 ];
 
 export interface PieChartProps {

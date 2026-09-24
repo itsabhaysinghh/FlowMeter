@@ -34,9 +34,9 @@ const variantStyles: Record<
     pulseBg: 'bg-rose-400',
   },
   info: {
-    container: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-900/60 shadow-blue-500/10',
-    dotBg: 'bg-blue-500',
-    pulseBg: 'bg-blue-400',
+    container: 'bg-[#00B4D8]/10 text-[#00B4D8] border-[#00B4D8]/30 shadow-[#00B4D8]/10',
+    dotBg: 'bg-[#00B4D8]',
+    pulseBg: 'bg-[#00B4D8]/70',
   },
   default: {
     container: 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 shadow-slate-500/10',

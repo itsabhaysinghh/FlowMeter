@@ -182,7 +182,7 @@ export function DeleteDataDialog({
                   id="delete-device"
                   value={deviceId}
                   onChange={(event) => setDeviceId(event.target.value)}
-                  className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-9 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-9 text-xs font-semibold text-slate-800 outline-none transition focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                 >
                   {devices.length === 0 && <option value="">No meter devices available</option>}
                   {devices.map((device) => (
@@ -315,7 +315,7 @@ function TimeField({ id, label, value, onChange }: { id: string; label: string; 
         step="60"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-[#00B4D8] focus:ring-2 focus:ring-[#00B4D8]/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
       />
     </div>
   );

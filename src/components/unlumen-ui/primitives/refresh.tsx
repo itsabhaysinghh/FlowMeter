@@ -17,7 +17,7 @@ export interface RefreshButtonProps {
 
 const variantStyles: Record<RefreshButtonVariant, string> = {
   neutral: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60 shadow-xs',
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600 shadow-sm',
+  primary: 'bg-[#00B4D8] text-white hover:bg-[#0096B4] border border-[#00B4D8] shadow-sm shadow-[#00B4D8]/20',
   outline: 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 shadow-xs',
   ghost: 'bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white',
 };
@@ -63,7 +63,7 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
     >
       <RotateCcw
         className={`transition-transform duration-500 ${currentSize.icon} ${
-          isSpinning ? 'animate-spin text-blue-500 dark:text-blue-400' : ''
+          isSpinning ? 'animate-spin text-[#00B4D8]' : ''
         }`}
       />
       {label && <span>{label}</span>}

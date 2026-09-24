@@ -319,7 +319,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               <span className="text-slate-400">
                 {isHourLevel ? 'Flow Rate:' : 'Consumption:'}
               </span>
-              <span className="font-extrabold text-blue-400 text-sm tracking-tight">
+              <span className="font-extrabold text-[#00B4D8] text-sm tracking-tight">
                 {isHourLevel ? `${formatNumber(val, 2)} L/min` : `${formatNumber(val, 1)} L`}
               </span>
             </div>
@@ -327,14 +327,14 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
             {!isHourLevel && pt.isPeak && (
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-400">Status:</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/60">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0A1F44]/60 text-[#00B4D8] border border-[#00B4D8]/30">
                   Peak Usage
                 </span>
               </div>
             )}
 
             {!isHourLevel && (
-              <div className="pt-1.5 border-t border-slate-800/60 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+              <div className="pt-1.5 border-t border-slate-800/60 text-[10px] text-[#00B4D8] font-semibold flex items-center gap-1">
                 <span>Click bar to drill down</span>
                 <ArrowRight className="w-3 h-3" />
               </div>
@@ -355,7 +355,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
           
           {/* Header Title & Level Indicator */}
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+            <div className="p-2.5 rounded-xl bg-[#00B4D8]/10 text-[#00B4D8] border border-[#00B4D8]/20">
               <Layers className="w-5 h-5" />
             </div>
             <div>
@@ -363,7 +363,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   Hierarchical Historical Flow Analysis
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-blue-100 text-blue-700">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-[#0A1F44]/10 text-[#0A1F44]">
                   {drillState.level === 'year' && 'Level 1: Year'}
                   {drillState.level === 'month' && 'Level 2: Month'}
                   {drillState.level === 'day' && 'Level 3: Day'}
@@ -383,7 +383,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               <select
                 value={selectedDeviceId}
                 onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#00B4D8]/20 cursor-pointer"
               >
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -407,26 +407,29 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
             onClick={() => navigateToLevel('year')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               drillState.level === 'year'
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-[#00B4D8] text-white shadow-sm shadow-[#00B4D8]/20'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
             }`}
           >
             <span>Year {drillState.year}</span>
           </button>
 
-          <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-
-          <button
-            type="button"
-            onClick={() => navigateToLevel('month')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              drillState.level === 'month'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-            }`}
-          >
-            <span>{formatIstMonthYear(`${drillState.year}-${String(drillState.month).padStart(2, '0')}`, true)}</span>
-          </button>
+          {drillState.level !== 'year' && (
+            <>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+              <button
+                type="button"
+                onClick={() => navigateToLevel('month')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  drillState.level === 'month'
+                    ? 'bg-[#00B4D8] text-white shadow-sm shadow-[#00B4D8]/20'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                }`}
+              >
+                <span>{formatIstMonthYear(`${drillState.year}-${String(drillState.month).padStart(2, '0')}`, true)}</span>
+              </button>
+            </>
+          )}
 
           {(drillState.level === 'day' || drillState.level === 'hour') && (
             <>
@@ -436,7 +439,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                 onClick={() => navigateToLevel('day')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   drillState.level === 'day'
-                    ? 'bg-blue-600 text-white shadow-sm'
+                    ? 'bg-[#00B4D8] text-white shadow-sm shadow-[#00B4D8]/20'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                 }`}
               >
@@ -448,7 +451,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
           {drillState.level === 'hour' && (
             <>
               <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#00B4D8] text-white shadow-sm shadow-[#00B4D8]/20">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{formatIstHourLabel(drillState.hour)}</span>
               </div>
@@ -482,7 +485,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
             <button
               type="button"
               onClick={() => handleShiftPeriod(-1)}
-              className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-[#00B4D8] transition-all cursor-pointer"
               title="Previous Period"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -490,7 +493,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
             <button
               type="button"
               onClick={() => handleShiftPeriod(1)}
-              className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-blue-600 transition-all cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-[#00B4D8] transition-all cursor-pointer"
               title="Next Period"
             >
               <ChevronRight className="w-4 h-4" />
@@ -499,13 +502,13 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
 
           {/* Level 1: Year Selector */}
           {drillState.level === 'year' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-xs font-bold text-slate-800">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-bold text-slate-800">
+              <Calendar className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span className="text-slate-500 font-medium">Select Year:</span>
               <select
                 value={drillState.year}
                 onChange={(e) => handleSelectYear(Number(e.target.value))}
-                className="bg-transparent font-extrabold text-blue-700 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent font-extrabold text-[#0A1F44] text-xs focus:outline-none cursor-pointer"
               >
                 {yearsList.map((y) => (
                   <option key={y} value={y}>
@@ -518,13 +521,13 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
 
           {/* Level 2: Month & Year Selector */}
           {drillState.level === 'month' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-xs font-bold text-slate-800">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-bold text-slate-800">
+              <Calendar className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span className="text-slate-500 font-medium">Month:</span>
               <select
                 value={drillState.month}
                 onChange={(e) => handleDrillIntoMonth(Number(e.target.value))}
-                className="bg-transparent font-extrabold text-blue-700 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent font-extrabold text-[#0A1F44] text-xs focus:outline-none cursor-pointer"
               >
                 {monthNames.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -536,7 +539,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               <select
                 value={drillState.year}
                 onChange={(e) => handleSelectYear(Number(e.target.value))}
-                className="bg-transparent font-extrabold text-blue-700 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent font-extrabold text-[#0A1F44] text-xs focus:outline-none cursor-pointer"
               >
                 {yearsList.map((y) => (
                   <option key={y} value={y}>
@@ -549,8 +552,8 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
 
           {/* Level 3: Day DatePicker */}
           {drillState.level === 'day' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-xs font-bold text-slate-800">
-              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-bold text-slate-800">
+              <Calendar className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span className="text-slate-500 font-medium">Date:</span>
               <DatePicker
                 value={drillState.date}
@@ -561,13 +564,13 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
 
           {/* Level 4: Hour Selector & Date */}
           {drillState.level === 'hour' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/70 text-xs font-bold text-slate-800">
-              <Clock className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#00B4D8]/30 bg-[#00B4D8]/5 text-xs font-bold text-slate-800">
+              <Clock className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span className="text-slate-500 font-medium">Hour:</span>
               <select
                 value={drillState.hour}
                 onChange={(e) => handleDrillIntoHour(Number(e.target.value))}
-                className="bg-transparent font-extrabold text-blue-700 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent font-extrabold text-[#0A1F44] text-xs focus:outline-none cursor-pointer"
               >
                 {Array.from({ length: 24 }, (_, i) => (
                   <option key={i} value={i}>
@@ -593,7 +596,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               disabled={loading || !summary?.rawRecords || summary.rawRecords.length === 0}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-3.5 h-3.5 text-blue-600" />
+              <Download className="w-3.5 h-3.5 text-[#00B4D8]" />
               <span>Export Hour CSV</span>
             </button>
           )}
@@ -602,7 +605,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
             type="button"
             onClick={fetchData}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00B4D8] hover:bg-[#0096B4] text-white text-xs font-bold transition-all shadow-sm shadow-[#00B4D8]/20 cursor-pointer disabled:opacity-50"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Fetching...' : 'Refresh'}</span>
@@ -632,8 +635,8 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
           unit="Litres"
           subtitle={summary?.subtitle || 'Aggregated flow volume'}
           icon={<Droplets className="w-5 h-5" />}
-          iconBgColor="bg-blue-50"
-          iconTextColor="text-blue-600"
+          iconBgColor="bg-[#00B4D8]/10"
+          iconTextColor="text-[#00B4D8]"
         />
 
         <MetricCard
@@ -670,8 +673,8 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               : 'Authentic 1-minute samples'
           }
           icon={<Activity className="w-5 h-5" />}
-          iconBgColor="bg-purple-50"
-          iconTextColor="text-purple-600"
+          iconBgColor="bg-[#0A1F44]/10"
+          iconTextColor="text-[#0A1F44]"
         />
       </div>
 
@@ -687,7 +690,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
       >
         {loading ? (
           <div className="flex flex-col items-center justify-center h-[320px] bg-slate-50/50 rounded-2xl">
-            <Activity className="w-8 h-8 text-blue-500 animate-pulse mb-2" />
+            <Activity className="w-8 h-8 text-[#00B4D8] animate-pulse mb-2" />
             <span className="text-xs font-semibold text-slate-500">Querying DynamoDB telemetry summary...</span>
           </div>
         ) : !summary || summary.dataPoints.length === 0 || summary.dataPoints.every((p) => p.value === 0) ? (
@@ -710,8 +713,8 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               >
                 <defs>
                   <linearGradient id="hourFlowGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="#00B4D8" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#00B4D8" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.6} />
@@ -719,24 +722,24 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+                  tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+                  tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
                   tickFormatter={(val) => `${val} L/m`}
                 />
                 <Tooltip content={<CustomDrillTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#2563EB"
+                  stroke="#00B4D8"
                   strokeWidth={2.5}
                   fill="url(#hourFlowGradient)"
-                  dot={{ r: 3, fill: '#2563EB', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                  activeDot={{ r: 6, fill: '#1D4ED8', stroke: '#FFFFFF', strokeWidth: 2 }}
+                  dot={{ r: 3, fill: '#00B4D8', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                  activeDot={{ r: 6, fill: '#0A1F44', stroke: '#FFFFFF', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -752,12 +755,12 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
               >
                 <defs>
                   <linearGradient id="drillBarGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.9} />
+                    <stop offset="0%" stopColor="#00B4D8" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#0096B4" stopOpacity={0.9} />
                   </linearGradient>
                   <linearGradient id="drillPeakGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#F97316" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#D97706" stopOpacity={0.9} />
+                    <stop offset="0%" stopColor="#0A1F44" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#162F5E" stopOpacity={0.9} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.6} />
@@ -765,13 +768,13 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+                  tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
                   dy={8}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+                  tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
                   tickFormatter={(val) => `${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
                 />
                 <Tooltip content={<CustomDrillTooltip />} cursor={{ fill: 'rgba(241, 245, 249, 0.7)', rx: 6 }} />
@@ -840,7 +843,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                     setTableSearch(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-48"
+                  className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#00B4D8]/20 w-48"
                 />
               </div>
             </div>
@@ -999,7 +1002,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                           handleDrillIntoHour(Number(pt.id));
                         }
                       }}
-                      className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                      className="hover:bg-[#00B4D8]/5 transition-colors cursor-pointer group"
                     >
                       <td className="py-2.5 pl-2 font-semibold text-slate-800 flex items-center gap-2">
                         <span>{pt.subLabel || pt.label}</span>
@@ -1018,7 +1021,7 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
                       <td className="py-2.5 pr-2 text-right">
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#00B4D8] group-hover:text-[#0096B4] group-hover:translate-x-0.5 transition-all"
                         >
                           <span>
                             {drillState.level === 'year'

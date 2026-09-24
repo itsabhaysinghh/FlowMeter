@@ -130,7 +130,7 @@ export const FlowGaugeCard: React.FC<FlowGaugeCardProps> = ({
               stroke="currentColor"
               strokeWidth={strokeWidth}
               strokeLinecap="round"
-              className="text-flostat-secondary dark:text-blue-500 transition-all duration-500"
+              className="text-[#00B4D8] dark:text-[#00B4D8] transition-all duration-500"
             />
           )}
 
@@ -193,7 +193,7 @@ export const FlowGaugeCard: React.FC<FlowGaugeCardProps> = ({
             stroke="currentColor"
             strokeWidth={3}
             strokeLinecap="round"
-            className="text-flostat-primary dark:text-blue-400 transition-all duration-500"
+            className="text-[#00B4D8] dark:text-[#00B4D8] transition-all duration-500"
           />
 
           {/* Needle Base Dot */}
@@ -201,7 +201,7 @@ export const FlowGaugeCard: React.FC<FlowGaugeCardProps> = ({
             cx={needleStart.x}
             cy={needleStart.y}
             r={2.5}
-            className="fill-flostat-primary dark:fill-blue-400"
+            className="fill-[#00B4D8] dark:fill-[#00B4D8]"
           />
 
           {/* Center Large Value Readout */}

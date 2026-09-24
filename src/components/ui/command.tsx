@@ -155,7 +155,7 @@ export function CommandItem({
         onClick?.(e);
         onSelect?.();
       }}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer select-none ${
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-[#00B4D8]/10 hover:text-[#0A1F44] transition-colors cursor-pointer select-none ${
         disabled ? 'opacity-50 cursor-not-allowed' : ''
       } ${className}`}
       {...props}

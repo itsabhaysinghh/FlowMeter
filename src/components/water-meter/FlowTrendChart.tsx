@@ -100,7 +100,7 @@ export const FlowTrendChart: React.FC<FlowTrendChartProps> = ({ data }) => {
           {zoomLevel > 1 && (
             <button
               onClick={() => setZoomLevel(1)}
-              className="p-1.5 rounded-lg bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 shadow-xs border border-blue-200 dark:border-blue-800 transition-all active:scale-95 cursor-pointer"
+              className="p-1.5 rounded-lg bg-white dark:bg-slate-900 text-[#00B4D8] hover:bg-[#00B4D8]/10 shadow-xs border border-[#00B4D8]/30 transition-all active:scale-95 cursor-pointer"
               title="Reset Zoom"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -130,13 +130,13 @@ export const FlowTrendChart: React.FC<FlowTrendChartProps> = ({ data }) => {
               dataKey="time"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
               dy={8}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: '#4B5563', fontSize: 11, fontWeight: 500 }}
               unit=" L/m"
             />
             <Tooltip content={<CustomTrendTooltip />} />

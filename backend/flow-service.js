@@ -88,8 +88,7 @@ export class FlowService {
 
   async getHistory(query) {
     const range = parseRange(query, { defaultStart: epochSeconds() - 24 * 60 * 60, defaultEnd: epochSeconds() });
-    const limit = parseLimit(query.limit, 100);
-    const page = await this.repository.getReadingsPage({ ...range, limit, nextToken: query.next_token, scanIndexForward: false });
+    const page = await this.repository.getReadingsPage({ ...range, nextToken: query.next_token, scanIndexForward: false });
     const sorted = [...page.records].sort((left, right) => Number(right.timestamp) - Number(left.timestamp));
     return {
       success: true,
@@ -148,16 +147,40 @@ export class FlowService {
   }
 
   getDevices() {
+    const tankNames = {
+      FLOSTAT_001: 'Main Overhead Tank',
+      FLOSTAT_002: 'Ground Tank',
+      FLOSTAT_003: 'Block A Tank',
+      FLOSTAT_004: 'Block B Tank',
+      FLOSTAT_005: 'Fire Hydrant Tank',
+      FLOSTAT_006: 'Cooling Tower Tank',
+      FLOSTAT_007: 'RO Plant Tank',
+      FLOSTAT_008: 'Commercial Block Tank',
+      FLOSTAT_009: 'Residential Feed Tank',
+      FLOSTAT_010: 'HVAC Chiller Tank',
+      FLOSTAT_011: 'Industrial Inflow Tank',
+      FLOSTAT_012: 'Utility Reserve Tank',
+      FLOSTAT_013: 'Process Water Tank',
+      FLOSTAT_014: 'Secondary Storage Tank',
+    };
+
     return {
       success: true,
       devices: [
-        { device_id: PROTECTED_DEVICE, device_name: PROTECTED_DEVICE, site_name: 'Default Site', building_name: 'Default Building', tank_name: 'Tank 1', status: 'ACTIVE' },
+        {
+          device_id: PROTECTED_DEVICE,
+          device_name: PROTECTED_DEVICE,
+          site_name: 'Default Site',
+          building_name: 'Main Facility',
+          tank_name: tankNames[PROTECTED_DEVICE] || 'Main Overhead Tank',
+          status: 'ACTIVE',
+        },
         ...SIMULATED_DEVICES.map((deviceId) => ({
           device_id: deviceId,
           device_name: deviceId,
           site_name: 'Default Site',
-          building_name: 'Default Building',
-          tank_name: deviceId === 'FLOSTAT_002' ? 'Ground Tank' : deviceId === 'FLOSTAT_003' ? 'Block A Tank' : deviceId === 'FLOSTAT_004' ? 'Block B Tank' : 'Fire Hydrant Tank',
+          building_name: deviceId === 'FLOSTAT_002' ? 'Utility Block' : deviceId === 'FLOSTAT_003' ? 'Building A' : deviceId === 'FLOSTAT_004' ? 'Building B' : 'Plant Facility',
+          tank_name: tankNames[deviceId] || `${deviceId} Tank`,
           status: deviceId === 'FLOSTAT_004' ? 'OFFLINE' : 'ACTIVE',
         })),
       ],
