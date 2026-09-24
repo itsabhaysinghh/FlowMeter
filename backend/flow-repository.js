@@ -141,9 +141,9 @@ export class DynamoFlowRepository {
     try {
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
-        KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
-        ExpressionAttributeNames: { '#pk': 'flow_meter_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
+        ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
+        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startTime, ':endTime': endTime },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
@@ -152,9 +152,9 @@ export class DynamoFlowRepository {
     } catch (err) {
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
-        KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
-        ExpressionAttributeNames: { '#pk': 'device_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
+        ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
+        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startTime, ':endTime': endTime },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
