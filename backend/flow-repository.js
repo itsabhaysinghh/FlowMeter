@@ -38,7 +38,8 @@ export class DynamoFlowRepository {
   }
 
   async putReading(reading) {
-    const timestampVal = String(reading.device_timestamp).padStart(10, '0');
+    // Store timestamp as a Number (no string padding). This matches the existing DynamoDB schema.
+    const timestampVal = Number(reading.device_timestamp);
     const item = {
       ...reading,
       flow_meter_id: reading.device_id,
@@ -136,14 +137,13 @@ export class DynamoFlowRepository {
   }
 
   async getReadingsPage({ deviceId, startTime, endTime, limit, nextToken, scanIndexForward = true }) {
-    const startStr = String(startTime).padStart(10, '0');
-    const endStr = String(endTime).padStart(10, '0');
+    // Use numeric timestamps for the Query (no zero‑padding). This matches the existing DynamoDB schema where `timestamp` is stored as a Number.
     try {
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
         KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#pk': 'flow_meter_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startStr, ':endTime': endStr },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
@@ -154,7 +154,7 @@ export class DynamoFlowRepository {
         TableName: this.readingsTableName,
         KeyConditionExpression: '#pk = :deviceId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#pk': 'device_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startStr, ':endTime': endStr },
+        ExpressionAttributeValues: { ':deviceId': deviceId, ':startTime': startTime, ':endTime': endTime },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
