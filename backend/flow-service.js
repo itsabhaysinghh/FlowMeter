@@ -87,9 +87,16 @@ export class FlowService {
   }
 
   async getHistory(query) {
+    // Fetch all matching readings without a fixed limit.
     const range = parseRange(query, { defaultStart: epochSeconds() - 24 * 60 * 60, defaultEnd: epochSeconds() });
-    const page = await this.repository.getReadingsPage({ ...range, nextToken: query.next_token, scanIndexForward: false });
-    const sorted = [...page.records].sort((left, right) => Number(right.timestamp) - Number(left.timestamp));
+    let allRecords = [];
+    let nextToken = query.next_token;
+    do {
+      const page = await this.repository.getReadingsPage({ ...range, nextToken, scanIndexForward: false });
+      allRecords.push(...page.records);
+      nextToken = page.nextToken;
+    } while (nextToken);
+    const sorted = allRecords.sort((left, right) => Number(right.timestamp) - Number(left.timestamp));
     return {
       success: true,
       records: sorted.map((record) => ({
@@ -99,7 +106,7 @@ export class FlowService {
         avg_flow_rate_lpm: record.flow_rate_lpm,
         volume_litres: record.flow_rate_lpm,
       })),
-      next_token: page.nextToken,
+      next_token: undefined,
     };
   }
 
