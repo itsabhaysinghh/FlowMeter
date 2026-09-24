@@ -38,8 +38,8 @@ export class DynamoFlowRepository {
   }
 
   async putReading(reading) {
-    // Store timestamp as a Number (no string padding). This matches the existing DynamoDB schema.
-    const timestampVal = Number(reading.device_timestamp);
+    // Store timestamp as a zero‑padded string to match the DynamoDB sort‑key type (String).
+    const timestampVal = String(reading.device_timestamp).padStart(10, '0');
     const item = {
       ...reading,
       flow_meter_id: reading.device_id,
@@ -137,24 +137,42 @@ export class DynamoFlowRepository {
   }
 
   async getReadingsPage({ deviceId, startTime, endTime, limit, nextToken, scanIndexForward = true }) {
-    // Use numeric timestamps for the Query (no zero‑padding). This matches the existing DynamoDB schema where `timestamp` is stored as a Number.
+    // Use zero‑padded string timestamps for the Query to match DynamoDB sort‑key type (String).
+    const startStr = String(startTime).padStart(10, '0');
+    const endStr = String(endTime).padStart(10, '0');
+    console.log('DynamoDB Query (primary) - start', {
+      TableName: this.readingsTableName,
+      KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
+      ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
+      ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startStr, ':endTime': endStr },
+      Limit: limit,
+      ExclusiveStartKey: decodeKey(nextToken),
+    });
     try {
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
         KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startStr, ':endTime': endStr },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
       }));
       return { records: response.Items || [], nextToken: response.LastEvaluatedKey ? encodeKey(response.LastEvaluatedKey) : undefined };
     } catch (err) {
+      console.log('DynamoDB Query (fallback) - start', {
+        TableName: this.readingsTableName,
+        KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
+        ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
+        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startStr, ':endTime': endStr },
+        Limit: limit,
+        ExclusiveStartKey: decodeKey(nextToken),
+      });
       const response = await this.client.send(new QueryCommand({
         TableName: this.readingsTableName,
         KeyConditionExpression: '#flowMeterId = :flowMeterId AND #timestamp BETWEEN :startTime AND :endTime',
         ExpressionAttributeNames: { '#flowMeterId': 'flow_meter_id', '#timestamp': 'timestamp' },
-        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startTime, ':endTime': endTime },
+        ExpressionAttributeValues: { ':flowMeterId': deviceId, ':startTime': startStr, ':endTime': endStr },
         ExclusiveStartKey: decodeKey(nextToken),
         ...(limit ? { Limit: limit } : {}),
         ScanIndexForward: scanIndexForward,
