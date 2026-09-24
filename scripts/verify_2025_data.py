@@ -5,7 +5,7 @@ FLOSTAT Calendar Year 2025 Historical Data & API Verification Suite
 Performs comprehensive end-to-end data integrity, pagination, range query,
 and historical drill-down audits across all 13 devices (FLOSTAT_002 to FLOSTAT_014)
 using the existing production APIs:
-- GET /v1/flow/history
+- GET /v1/flow/
 - GET /v1/flow/summary
 - GET /v1/devices
 
