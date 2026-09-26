@@ -1,5 +1,9 @@
 name: Deploy Flostat AWS Serverless Infrastructure
 
+concurrency:
+  group: flostat-aws-deployment
+  cancel-in-progress: false
+
 on:
   push:
     branches:
