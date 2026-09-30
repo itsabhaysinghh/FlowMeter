@@ -2,6 +2,14 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Flostat Flow Meter Backend Serverless Stack
 
+Parameters:
+  FlowDeviceTableName:
+    Type: String
+    Description: Existing DynamoDB table for flow device data (e.g., flostat-jitendera)
+  FlowMeterTableName:
+    Type: String
+    Description: Existing DynamoDB table for flow meter readings (e.g., flostat-flowmeter-jitendera)
+
 Globals:
   Function:
     Timeout: 15
@@ -9,50 +17,12 @@ Globals:
     Runtime: nodejs20.x
     Environment:
       Variables:
-        FLOW_DEVICE_TABLE: !Ref FlostatFlowDeviceTable
-        FLOW_METER_TABLE: !Ref FlostatFlowMeterTable
-        FLOW_READINGS_TABLE: !Ref FlostatFlowMeterTable
-        FLOW_ROLLUPS_TABLE: !Ref FlostatFlowDeviceTable
+        FLOW_DEVICE_TABLE: !Ref FlowDeviceTableName
+        FLOW_METER_TABLE: !Ref FlowMeterTableName
+        FLOW_READINGS_TABLE: !Ref FlowMeterTableName
+        FLOW_ROLLUPS_TABLE: !Ref FlowDeviceTableName
 
 Resources:
-  FlostatFlowDeviceTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: org_id
-          AttributeType: S
-        - AttributeName: flow_meter_id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: org_id
-          KeyType: HASH
-        - AttributeName: flow_meter_id
-          KeyType: RANGE
-      SSESpecification:
-        SSEEnabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-
-  FlostatFlowMeterTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: flow_meter_id
-          AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
-      KeySchema:
-        - AttributeName: flow_meter_id
-          KeyType: HASH
-        - AttributeName: timestamp
-          KeyType: RANGE
-      SSESpecification:
-        SSEEnabled: true
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-
   FlostatHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -78,9 +48,9 @@ Resources:
       Description: Flostat Serverless Lambda Handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref FlostatFlowDeviceTable
+            TableName: !Ref FlowDeviceTableName
         - DynamoDBCrudPolicy:
-            TableName: !Ref FlostatFlowMeterTable
+            TableName: !Ref FlowMeterTableName
       Events:
         ProxyApi:
           Type: HttpApi
@@ -101,7 +71,7 @@ Outputs:
     Value: !Sub "https://${FlostatHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
   DeviceTableName:
     Description: Flostat Flow Device Table Name
-    Value: !Ref FlostatFlowDeviceTable
+    Value: !Ref FlowDeviceTableName
   MeterTableName:
     Description: Flostat Flow Meter Table Name
-    Value: !Ref FlostatFlowMeterTable
+    Value: !Ref FlowMeterTableName

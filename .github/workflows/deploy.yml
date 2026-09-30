@@ -59,7 +59,7 @@ jobs:
       - name: SAM Build Infrastructure
         run: sam build
 
-      - name: SAM Deploy to AWS (Account 502830865576)
+      - name: SAM Deploy to AWS (Account 079184685014)
         run: |
           sam deploy \
             --debug \
@@ -68,8 +68,11 @@ jobs:
             --stack-name flostat-flow-serverless-stack \
             --region ap-south-1 \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-            --s3-bucket flostat-deploy-502830865576-mumbai \
-            --s3-prefix flostat-backend
+            --s3-bucket flostat-deploy-079184685014-mumbai \
+            --s3-prefix flostat-backend \
+            --parameter-overrides \
+              FlowDeviceTableName=flostat-jitendera \
+              FlowMeterTableName=flostat-flowmeter-jitendera
 
       - name: Print CloudFormation Failure Diagnostics
         if: failure()
