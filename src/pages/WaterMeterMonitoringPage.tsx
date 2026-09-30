@@ -988,211 +988,218 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
   };
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-      
-      {/* Top Global SaaS Status & Health Ticker */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-3 px-5 bg-white border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-500 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] font-sans">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">System Health:</span>
-            <GlowingBadge variant="success" pulse={true}>
-              98.2% Optimal
-            </GlowingBadge>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500">Meters Status:</span>
-            <GlowingBadge variant="info" pulse={false}>
-              {devices.filter(d => d.status === 'online').length} Online{devices.filter(d => d.status === 'offline').length > 0 ? ` | ${devices.filter(d => d.status === 'offline').length} Standby` : ''}
-            </GlowingBadge>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
+      {/* Left Dark Navy Fixed Sidebar */}
+      <aside className="w-full lg:w-64 shrink-0 bg-[#0A1F44] text-white flex flex-col lg:fixed lg:top-0 lg:bottom-0 lg:left-0 lg:h-screen lg:min-h-screen lg:overflow-y-auto border-r border-[#152E5E]/40 z-30">
+        {/* Top Branding Header */}
+        <div className="p-4 sm:p-5 border-b border-[#152E5E]/40 flex items-center justify-between lg:justify-start gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-sm shrink-0">
+              <img src="/flostat-logo.png" alt="Flostat Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-extrabold text-base text-white tracking-tight block leading-tight">Flostat</span>
+              <span className="text-[11px] font-medium text-slate-400 block truncate">Industrial IoT Platform</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-700 font-medium">
-              {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+        {/* Section Heading: NAVIGATION */}
+        <div className="px-4 lg:px-5 pt-4 lg:pt-5 pb-2 text-[10px] font-bold tracking-wider uppercase text-slate-400">
+          NAVIGATION
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible px-3 gap-1 lg:space-y-1 pb-4">
+          <button
+            type="button"
+            onClick={() => setActiveNav('overview')}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap text-left shrink-0 lg:w-full ${
+              activeNav === 'overview'
+                ? 'bg-[#142B58] text-white font-bold border border-blue-400/20 shadow-xs'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeNav === 'overview' ? 'text-[#00B4D8]' : 'text-slate-400'}`} />
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('devices')}
+            className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap text-left shrink-0 lg:w-full ${
+              activeNav === 'devices'
+                ? 'bg-[#142B58] text-white font-bold border border-blue-400/20 shadow-xs'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Server className={`w-4 h-4 shrink-0 ${activeNav === 'devices' ? 'text-[#00B4D8]' : 'text-slate-400'}`} />
+              <span className="truncate">Device Management</span>
+            </div>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
+              activeNav === 'devices'
+                ? 'bg-[#00B4D8] text-[#0A1F44]'
+                : 'bg-[#152E5E] text-slate-300'
+            }`}>
+              {devices.length}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('compare')}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap text-left shrink-0 lg:w-full ${
+              activeNav === 'compare'
+                ? 'bg-[#142B58] text-white font-bold border border-blue-400/20 shadow-xs'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Zap className={`w-4 h-4 shrink-0 ${activeNav === 'compare' ? 'text-[#00B4D8]' : 'text-slate-400'}`} />
+            <span>Comparison Mode</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('timerange')}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap text-left shrink-0 lg:w-full ${
+              activeNav === 'timerange'
+                ? 'bg-[#142B58] text-white font-bold border border-blue-400/20 shadow-xs'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Clock className={`w-4 h-4 shrink-0 ${activeNav === 'timerange' ? 'text-[#00B4D8]' : 'text-slate-400'}`} />
+            <span>Time-Range Analysis</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('drilldown')}
+            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap text-left shrink-0 lg:w-full ${
+              activeNav === 'drilldown'
+                ? 'bg-[#142B58] text-white font-bold border border-blue-400/20 shadow-xs'
+                : 'text-slate-300 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Layers className={`w-4 h-4 shrink-0 ${activeNav === 'drilldown' ? 'text-[#00B4D8]' : 'text-slate-400'}`} />
+            <span>Reports</span>
+          </button>
+        </nav>
+      </aside>
+
+      {/* Right Main Content Pane */}
+      <div className="flex-1 min-w-0 lg:ml-64 p-4 sm:p-6 lg:p-8 space-y-6 bg-[#F8FAFC]">
+        {/* Top Global SaaS Status & Health Ticker */}
+        <div className="flex flex-wrap items-center justify-between gap-4 p-3 px-5 bg-white border border-slate-200 rounded-xl text-[11px] font-semibold text-slate-500 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] font-sans">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">System Health:</span>
+              <GlowingBadge variant="success" pulse={true}>
+                98.2% Optimal
+              </GlowingBadge>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500">Meters Status:</span>
+              <GlowingBadge variant="info" pulse={false}>
+                {devices.filter(d => d.status === 'online').length} Online{devices.filter(d => d.status === 'offline').length > 0 ? ` | ${devices.filter(d => d.status === 'offline').length} Standby` : ''}
+              </GlowingBadge>
+            </div>
           </div>
-          <span className="hidden sm:inline h-4 w-px bg-slate-200" />
-          <span>Last Sync: <span className="text-slate-700 font-semibold">{data ? data.metadata.lastUpdated : 'Just now'}</span></span>
-          {data && (
-            <>
-              <span className="hidden sm:inline h-4 w-px bg-slate-200" />
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Refresh:</span>
-                <div className="relative inline-block text-left">
-                  <select
-                    value={refreshInterval}
-                    onChange={(e) => setRefreshInterval(parseInt(e.target.value, 10))}
-                    className="appearance-none pr-7 pl-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all focus:outline-none cursor-pointer"
-                    title="Auto Refresh Settings"
-                  >
-                    <option value={5000}>5s</option>
-                    <option value={10000}>10s</option>
-                    <option value={30000}>30s</option>
-                    <option value={60000}>1m</option>
-                    <option value={300000}>5m</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
-                    <ChevronDown className="w-3 h-3" />
-                  </div>
-                </div>
-                <RefreshButton
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() => refetch()}
-                  title="Refresh Now"
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
 
-      {/* Dynamic Dashboard Alerts */}
-      {(showUpdateAlert || showMeterStatusAlert) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {showUpdateAlert && (
-            <Alert
-              variant="info"
-              onClose={() => {
-                setShowUpdateAlert(false);
-                localStorage.setItem('flostat_update_alert_dismissed', 'true');
-              }}
-            >
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <AlertTitle>New update available</AlertTitle>
-                <AlertDescription>
-                  A new update has been pushed to GitHub.
-                  <br />
-                  <strong>Latest update:</strong> Data consistency, Shadcn calendar & input-group search features.
-                </AlertDescription>
-              </div>
-            </Alert>
-          )}
-
-          {showMeterStatusAlert && (
-            <Alert
-              variant="default"
-              onClose={() => {
-                setShowMeterStatusAlert(false);
-                localStorage.setItem('flostat_meter_status_alert_dismissed', 'true');
-              }}
-            >
-              <Info className="w-4 h-4 text-[#00B4D8] shrink-0 mt-0.5" />
-              <div>
-                <AlertTitle>Meter status</AlertTitle>
-                <AlertDescription>
-                  <strong>{devices.filter(d => d.status === 'online').length}</strong> meters are currently active out of{" "}
-                  <strong>{devices.length}</strong> total meters.
-                </AlertDescription>
-              </div>
-            </Alert>
-          )}
-        </div>
-      )}
-
-      {deletionNotification && (
-        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-300">
-          <span>{deletionNotification}</span>
-          <button type="button" onClick={() => setDeletionNotification(null)} className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-100" aria-label="Dismiss success message">×</button>
-        </div>
-      )}
-
-      {/* Main Two-Column Sidebar Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-140px)]">
-        {/* Left Compact Sidebar */}
-        <aside className="w-full lg:w-56 shrink-0 self-start space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] space-y-1.5 font-sans">
-            <div className="flex items-center gap-2.5 px-2 pb-3 border-b border-slate-100 mb-1">
-              <img src="/flostat-logo.png" alt="Flostat Logo" className="w-8 h-8 rounded-lg object-contain border border-slate-100 shadow-sm" />
-              <div>
-                <span className="font-black text-xs text-slate-900 tracking-tight block">FLOSTAT</span>
-                <span className="text-[9px] font-semibold text-slate-400 block -mt-0.5">Water Monitoring</span>
-              </div>
-            </div>
-
-            <div className="px-3 pb-2 text-[10px] font-bold tracking-wider uppercase text-slate-400">
-              Operations
-            </div>
-            
-            <button
-              onClick={() => setActiveNav('overview')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'overview'
-                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Overview Dashboard</span>
-            </button>
-
-            <button
-              onClick={() => setActiveNav('devices')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'devices'
-                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Server className="w-4 h-4" />
-                <span>Meters Catalog</span>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${
-                activeNav === 'devices'
-                  ? 'bg-[#0096B4] text-white'
-                  : 'bg-slate-100 text-slate-650'
-              }`}>
-                {devices.length}
+          <div className="flex flex-wrap items-center gap-4 text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-700 font-medium">
+                {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
               </span>
-            </button>
-
-            <button
-              onClick={() => setActiveNav('compare')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'compare'
-                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Zap className="w-4 h-4" />
-              <span>Comparison Mode</span>
-            </button>
-
-            <button
-              onClick={() => setActiveNav('timerange')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'timerange'
-                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>Time-Range Analysis</span>
-            </button>
-
-            <button
-              onClick={() => setActiveNav('drilldown')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeNav === 'drilldown'
-                  ? 'bg-[#00B4D8] text-white shadow-md shadow-[#00B4D8]/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>Historical Drill-Down</span>
-            </button>
-
+            </div>
+            <span className="hidden sm:inline h-4 w-px bg-slate-200" />
+            <span>Last Sync: <span className="text-slate-700 font-semibold">{data ? data.metadata.lastUpdated : 'Just now'}</span></span>
+            {data && (
+              <>
+                <span className="hidden sm:inline h-4 w-px bg-slate-200" />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Refresh:</span>
+                  <div className="relative inline-block text-left">
+                    <select
+                      value={refreshInterval}
+                      onChange={(e) => setRefreshInterval(parseInt(e.target.value, 10))}
+                      className="appearance-none pr-7 pl-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all focus:outline-none cursor-pointer"
+                      title="Auto Refresh Settings"
+                    >
+                      <option value={5000}>5s</option>
+                      <option value={10000}>10s</option>
+                      <option value={30000}>30s</option>
+                      <option value={60000}>1m</option>
+                      <option value={300000}>5m</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
+                      <ChevronDown className="w-3 h-3" />
+                    </div>
+                  </div>
+                  <RefreshButton
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => refetch()}
+                    title="Refresh Now"
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </aside>
+        </div>
 
-        {/* Right Main Content Pane */}
-        <div className="flex-1 min-w-0 space-y-6">
+        {/* Dynamic Dashboard Alerts */}
+        {(showUpdateAlert || showMeterStatusAlert) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {showUpdateAlert && (
+              <Alert
+                variant="info"
+                onClose={() => {
+                  setShowUpdateAlert(false);
+                  localStorage.setItem('flostat_update_alert_dismissed', 'true');
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <AlertTitle>New update available</AlertTitle>
+                  <AlertDescription>
+                    A new update has been pushed to GitHub.
+                    <br />
+                    <strong>Latest update:</strong> Data consistency, Shadcn calendar & input-group search features.
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+
+            {showMeterStatusAlert && (
+              <Alert
+                variant="default"
+                onClose={() => {
+                  setShowMeterStatusAlert(false);
+                  localStorage.setItem('flostat_meter_status_alert_dismissed', 'true');
+                }}
+              >
+                <Info className="w-4 h-4 text-[#00B4D8] shrink-0 mt-0.5" />
+                <div>
+                  <AlertTitle>Meter status</AlertTitle>
+                  <AlertDescription>
+                    <strong>{devices.filter(d => d.status === 'online').length}</strong> meters are currently active out of{" "}
+                    <strong>{devices.length}</strong> total meters.
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+          </div>
+        )}
+
+        {deletionNotification && (
+          <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-300">
+            <span>{deletionNotification}</span>
+            <button type="button" onClick={() => setDeletionNotification(null)} className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-100" aria-label="Dismiss success message">×</button>
+          </div>
+        )}
 
           {/* VIEW 1: Overview Executive Page */}
           {activeNav === 'overview' && (
@@ -1709,7 +1716,6 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
           )}
 
         </div>
-      </div>
 
       <DeleteDataDialog
         isOpen={isDeleteDataOpen}
@@ -1755,12 +1761,12 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                 <CommandGroup heading="Quick Dashboard Navigation">
                   <CommandItem onSelect={() => { setActiveNav('overview'); setIsCommandOpen(false); }}>
                     <LayoutDashboard className="w-4 h-4 text-[#00B4D8] shrink-0" />
-                    <span>Overview Dashboard</span>
+                    <span>Dashboard</span>
                     <CommandShortcut>⌘1</CommandShortcut>
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('devices'); setIsCommandOpen(false); }}>
                     <Server className="w-4 h-4 text-[#0A1F44] dark:text-slate-300 shrink-0" />
-                    <span>Meters Catalog</span>
+                    <span>Device Management</span>
                     <CommandShortcut>⌘2</CommandShortcut>
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('compare'); setIsCommandOpen(false); }}>
@@ -1775,7 +1781,7 @@ export const WaterMeterMonitoringPage: React.FC<WaterMeterMonitoringPageProps> =
                   </CommandItem>
                   <CommandItem onSelect={() => { setActiveNav('drilldown'); setIsCommandOpen(false); }}>
                     <Layers className="w-4 h-4 text-[#0A1F44] dark:text-slate-300 shrink-0" />
-                    <span>Historical Drill-Down</span>
+                    <span>Reports</span>
                     <CommandShortcut>⌘5</CommandShortcut>
                   </CommandItem>
                 </CommandGroup>

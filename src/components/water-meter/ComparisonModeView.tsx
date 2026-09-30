@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   GitCompare,
   Layers,
@@ -168,10 +168,15 @@ export const ComparisonModeView: React.FC<ComparisonModeViewProps> = ({
     }
   }, [blocks]);
 
-  // Keep deviceA in sync if initialDeviceId changes
+  const prevInitialDeviceIdRef = useRef(initialDeviceId);
+
+  // Keep deviceA in sync ONLY if initialDeviceId genuinely changes
   useEffect(() => {
-    if (initialDeviceId && devices.some((d) => d.id === initialDeviceId)) {
-      setDeviceA(initialDeviceId);
+    if (initialDeviceId && initialDeviceId !== prevInitialDeviceIdRef.current) {
+      prevInitialDeviceIdRef.current = initialDeviceId;
+      if (devices.some((d) => d.id === initialDeviceId)) {
+        setDeviceA(initialDeviceId);
+      }
     }
   }, [initialDeviceId, devices]);
 

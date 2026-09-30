@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -87,12 +87,19 @@ export const TimeRangeAnalysisView: React.FC<TimeRangeAnalysisViewProps> = ({
   // Notification / export status
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
-  // Synchronize when initialDeviceId changes or when devices list first becomes available
+  const prevInitialDeviceIdRef = useRef(initialDeviceId);
+  const initialFetchDone = useRef(false);
+
+  // Synchronize ONLY when external initialDeviceId prop genuinely changes from parent
   useEffect(() => {
-    if (initialDeviceId && devices.some((d) => d.id === initialDeviceId)) {
-      setSelectedDeviceId(initialDeviceId);
-    } else if (devices.length > 0 && !devices.some((d) => d.id === selectedDeviceId)) {
-      setSelectedDeviceId(devices[0].id);
+    if (initialDeviceId && initialDeviceId !== prevInitialDeviceIdRef.current) {
+      prevInitialDeviceIdRef.current = initialDeviceId;
+      if (devices.some((d) => d.id === initialDeviceId)) {
+        setSelectedDeviceId(initialDeviceId);
+      }
+    } else if (devices.length > 0 && selectedDeviceId && !devices.some((d) => d.id === selectedDeviceId)) {
+      const fallback = (initialDeviceId && devices.some((d) => d.id === initialDeviceId)) ? initialDeviceId : devices[0].id;
+      setSelectedDeviceId(fallback);
     }
   }, [devices, initialDeviceId, selectedDeviceId]);
 
@@ -143,9 +150,12 @@ export const TimeRangeAnalysisView: React.FC<TimeRangeAnalysisViewProps> = ({
     [selectedDeviceId, startDate, startTime, endDate, endTime]
   );
 
-  // Run initial query on mount
+  // Run initial query once on mount
   useEffect(() => {
-    handleExecuteAnalysis();
+    if (!initialFetchDone.current) {
+      initialFetchDone.current = true;
+      handleExecuteAnalysis();
+    }
   }, [handleExecuteAnalysis]);
 
   const handleReset = () => {

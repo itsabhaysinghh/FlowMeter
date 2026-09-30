@@ -986,23 +986,141 @@ export class MeterService {
   }
 
   /**
+   * Fetches authentic raw 1-minute telemetry records over any arbitrary epoch range in IST.
+   * Chunks large time ranges into 1-day (86,400s) slices, executes them concurrently (pool size = 6),
+   * follows all pagination cursors, deduplicates, and sorts chronologically.
+   */
+  async fetchRawMinuteHistory(
+    deviceId: string,
+    startEpoch: number,
+    endEpoch: number,
+    onProgress?: (loaded: number, totalEstimated?: number) => void
+  ): Promise<FlowHistoryRecord[]> {
+    if (!deviceId || !Number.isFinite(startEpoch) || !Number.isFinite(endEpoch) || startEpoch > endEpoch) {
+      return [];
+    }
+
+    const CHUNK_SIZE_SEC = 86400; // 1 day chunking
+    const chunks: { start: number; end: number }[] = [];
+    let curStart = startEpoch;
+    while (curStart <= endEpoch) {
+      const curEnd = Math.min(curStart + CHUNK_SIZE_SEC - 1, endEpoch);
+      chunks.push({ start: curStart, end: curEnd });
+      curStart = curEnd + 1;
+    }
+
+    const rawRecordsMap = new Map<number, any>();
+    const totalEstimated = Math.max(1, Math.round((endEpoch - startEpoch + 1) / 60));
+
+    const fetchChunk = async (chunk: { start: number; end: number }): Promise<void> => {
+      let nextToken: string | undefined = undefined;
+      do {
+        const queryParams: Record<string, any> = {
+          device_id: deviceId,
+          start_time: chunk.start,
+          end_time: chunk.end,
+          limit: 1000,
+        };
+        if (nextToken) {
+          queryParams.next_token = nextToken;
+        }
+
+        const data: any = await this.safeGet(`${API_BASE_URL}/v1/flow/history`, queryParams, 15000, 3);
+        if (data && Array.isArray(data.records)) {
+          for (const rec of data.records) {
+            const ts = Number(rec.timestamp);
+            if (Number.isFinite(ts) && ts >= startEpoch && ts <= endEpoch) {
+              rawRecordsMap.set(ts, rec);
+            }
+          }
+          nextToken = data.next_token;
+        } else {
+          nextToken = undefined;
+        }
+      } while (nextToken);
+    };
+
+    // Concurrency pool with worker queue
+    const CONCURRENCY = 6;
+    let chunkIndex = 0;
+
+    const worker = async () => {
+      while (chunkIndex < chunks.length) {
+        const idx = chunkIndex++;
+        const chunk = chunks[idx];
+        try {
+          await fetchChunk(chunk);
+          if (onProgress) {
+            onProgress(rawRecordsMap.size, totalEstimated);
+          }
+        } catch (err) {
+          console.error(`[fetchRawMinuteHistory] Failed chunk [${chunk.start}, ${chunk.end}]:`, err);
+        }
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, () => worker());
+    await Promise.all(workers);
+
+    // Sort strictly in chronological order (ascending timestamp)
+    const sorted = Array.from(rawRecordsMap.values()).sort(
+      (a, b) => Number(a.timestamp) - Number(b.timestamp)
+    );
+
+    const records: FlowHistoryRecord[] = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const rec = sorted[i];
+      const currentTs = Number(rec.timestamp);
+      const rate = Number(rec.avg_flow_rate_lpm ?? rec.flow_rate_lpm ?? 0);
+
+      let intervalSec = 60;
+      if (rec.interval_seconds && Number.isFinite(Number(rec.interval_seconds))) {
+        intervalSec = Number(rec.interval_seconds);
+      } else if (i > 0) {
+        intervalSec = Math.max(1, currentTs - Number(sorted[i - 1].timestamp));
+      }
+
+      let volume = rate * (intervalSec / 60);
+      if (rec.volume_litres !== undefined && Number.isFinite(Number(rec.volume_litres))) {
+        volume = Number(rec.volume_litres);
+      }
+
+      const timeFormatted = formatIstFullDateTime(currentTs);
+      const status = rate > 20 ? 'Peak' : rate < 5 ? 'Low Flow' : 'Normal';
+
+      records.push({
+        id: `${rec.device_id || deviceId}-${currentTs}`,
+        time: timeFormatted,
+        duration: `${Math.round(intervalSec)} sec`,
+        flowRate: Number(rate.toFixed(2)),
+        totalLitres: Number(volume.toFixed(2)),
+        status,
+      });
+    }
+
+    return records;
+  }
+
+  /**
    * Exports minute-level historical records as a CSV file.
    */
   exportDrillDownCSV(records: FlowHistoryRecord[], deviceId: string, timeframeLabel: string): boolean {
     if (!records || records.length === 0) return false;
     const cleanLabel = timeframeLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const headers = ['Timestamp (IST)', 'Device ID', 'Flow Rate (L/min)', 'Volume (Litres)', 'Interval', 'Status', 'Record ID'];
-    const rows = records.map((r) => [
-      `"${r.time}"`,
-      `"${deviceId}"`,
-      r.flowRate.toFixed(2),
-      r.totalLitres.toFixed(2),
-      `"${r.duration}"`,
-      `"${r.status}"`,
-      `"${r.id}"`,
-    ]);
-    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const headers = 'Timestamp (IST),Device ID,Flow Rate (L/min),Volume (Litres),Interval,Status,Record ID\r\n';
+    
+    // Chunk lines into string blocks to handle high record volumes (e.g. 500k+ rows) smoothly
+    const chunks: string[] = [headers];
+    const CHUNK_ROW_SIZE = 10000;
+    for (let i = 0; i < records.length; i += CHUNK_ROW_SIZE) {
+      const slice = records.slice(i, i + CHUNK_ROW_SIZE);
+      const chunkStr = slice.map((r) => 
+        `"${r.time}","${deviceId}",${r.flowRate.toFixed(2)},${r.totalLitres.toFixed(2)},"${r.duration}","${r.status}","${r.id}"`
+      ).join('\r\n') + '\r\n';
+      chunks.push(chunkStr);
+    }
+
+    const blob = new Blob(chunks, { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

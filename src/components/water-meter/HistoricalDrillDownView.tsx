@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -36,6 +36,7 @@ import type {
   DrillDownState,
   DrillDownSummary,
   DrillDownDataPoint,
+  FlowHistoryRecord,
 } from '../../types/meter.types';
 import { meterService } from '../../services/meter.service';
 import {
@@ -46,6 +47,10 @@ import {
   shiftIstMonth,
   shiftIstDay,
   shiftIstHour,
+  getIstYearRange,
+  getIstMonthRange,
+  getIstDayRange,
+  getIstHourRange,
 } from '../../utils/ist';
 import { formatNumber, formatVolume, formatFlowRate } from '../../utils/formatters';
 import { StatusBadge } from '../common/StatusBadge';
@@ -73,10 +78,15 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
     return devices[0]?.id || 'FLOSTAT_001';
   });
 
-  // Keep device in sync if external initialDeviceId changes
+  const prevInitialDeviceIdRef = useRef(initialDeviceId);
+
+  // Keep device in sync ONLY if external initialDeviceId changes
   useEffect(() => {
-    if (initialDeviceId && devices.some((d) => d.id === initialDeviceId)) {
-      setSelectedDeviceId(initialDeviceId);
+    if (initialDeviceId && initialDeviceId !== prevInitialDeviceIdRef.current) {
+      prevInitialDeviceIdRef.current = initialDeviceId;
+      if (devices.some((d) => d.id === initialDeviceId)) {
+        setSelectedDeviceId(initialDeviceId);
+      }
     }
   }, [initialDeviceId, devices]);
 
@@ -110,6 +120,8 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 10;
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState<{ loaded: number; total?: number } | null>(null);
 
   const selectedDeviceObj = useMemo(() => {
     return devices.find((d) => d.id === selectedDeviceId) || devices[0] || null;
@@ -224,17 +236,78 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
     }
   };
 
-  // CSV Export for Hour View
-  const handleExportCSV = () => {
-    if (!summary?.rawRecords || summary.rawRecords.length === 0) return;
-    const success = meterService.exportDrillDownCSV(
-      summary.rawRecords,
-      selectedDeviceId,
-      `${drillState.date}_hour_${drillState.hour}`
-    );
-    if (success) {
-      setExportNotice(`Exported ${summary.rawRecords.length} minute records to CSV`);
-      setTimeout(() => setExportNotice(null), 4000);
+  // CSV Export for ALL drill-down levels (Year, Month, Day, Hour) exporting authentic raw 1-minute records
+  const handleExportCSV = async () => {
+    if (!selectedDeviceId || isExporting) return;
+
+    try {
+      setIsExporting(true);
+      setExportProgress({ loaded: 0 });
+
+      let startEpoch: number;
+      let endEpoch: number;
+      let timeframeLabel: string;
+      let preloadedRecords: FlowHistoryRecord[] | null = null;
+
+      if (drillState.level === 'hour') {
+        const { start, end } = getIstHourRange(drillState.date, drillState.hour);
+        startEpoch = start;
+        endEpoch = end;
+        timeframeLabel = `${drillState.date}_hour_${drillState.hour}`;
+        if (summary?.rawRecords && summary.rawRecords.length > 0) {
+          preloadedRecords = summary.rawRecords;
+        }
+      } else if (drillState.level === 'day') {
+        const { start, end } = getIstDayRange(drillState.date);
+        startEpoch = start;
+        endEpoch = end;
+        timeframeLabel = `${drillState.date}_day`;
+      } else if (drillState.level === 'month') {
+        const { start, end } = getIstMonthRange(drillState.year, drillState.month);
+        startEpoch = start;
+        endEpoch = end;
+        const mStr = String(drillState.month).padStart(2, '0');
+        timeframeLabel = `${drillState.year}_${mStr}_month`;
+      } else {
+        // year level
+        const { start, end } = getIstYearRange(drillState.year);
+        startEpoch = start;
+        endEpoch = end;
+        timeframeLabel = `${drillState.year}_year`;
+      }
+
+      let records: FlowHistoryRecord[];
+      if (preloadedRecords) {
+        records = preloadedRecords;
+      } else {
+        records = await meterService.fetchRawMinuteHistory(
+          selectedDeviceId,
+          startEpoch,
+          endEpoch,
+          (loaded, total) => {
+            setExportProgress({ loaded, total });
+          }
+        );
+      }
+
+      if (!records || records.length === 0) {
+        setExportNotice(`No raw minute records found for the selected ${drillState.level}.`);
+        setTimeout(() => setExportNotice(null), 5000);
+        return;
+      }
+
+      const success = meterService.exportDrillDownCSV(records, selectedDeviceId, timeframeLabel);
+      if (success) {
+        setExportNotice(`Successfully exported ${records.length.toLocaleString()} raw minute records to CSV.`);
+        setTimeout(() => setExportNotice(null), 6000);
+      }
+    } catch (err: any) {
+      console.error('[HistoricalDrillDownView] Export CSV error:', err);
+      setExportNotice(`Export failed: ${err?.message || 'Unknown error occurred during export'}`);
+      setTimeout(() => setExportNotice(null), 6000);
+    } finally {
+      setIsExporting(false);
+      setExportProgress(null);
     }
   };
 
@@ -589,22 +662,39 @@ export const HistoricalDrillDownView: React.FC<HistoricalDrillDownViewProps> = (
 
         {/* Right: Refresh & CSV Export Actions */}
         <div className="flex items-center gap-2">
-          {drillState.level === 'hour' && (
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              disabled={loading || !summary?.rawRecords || summary.rawRecords.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            disabled={loading || isExporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title={`Export raw 1-minute telemetry records for selected ${drillState.level}`}
+          >
+            {isExporting ? (
+              <RotateCcw className="w-3.5 h-3.5 text-[#00B4D8] animate-spin" />
+            ) : (
               <Download className="w-3.5 h-3.5 text-[#00B4D8]" />
-              <span>Export Hour CSV</span>
-            </button>
-          )}
+            )}
+            <span>
+              {isExporting
+                ? exportProgress?.total
+                  ? `Exporting ${Math.min(99, Math.round((exportProgress.loaded / exportProgress.total) * 100))}% (${exportProgress.loaded.toLocaleString()})`
+                  : exportProgress?.loaded
+                  ? `Exporting (${exportProgress.loaded.toLocaleString()})...`
+                  : 'Preparing CSV...'
+                : drillState.level === 'year'
+                ? 'Export Year CSV'
+                : drillState.level === 'month'
+                ? 'Export Month CSV'
+                : drillState.level === 'day'
+                ? 'Export Day CSV'
+                : 'Export Hour CSV'}
+            </span>
+          </button>
 
           <button
             type="button"
             onClick={fetchData}
-            disabled={loading}
+            disabled={loading || isExporting}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#00B4D8] hover:bg-[#0096B4] text-white text-xs font-bold transition-all shadow-sm shadow-[#00B4D8]/20 cursor-pointer disabled:opacity-50"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
