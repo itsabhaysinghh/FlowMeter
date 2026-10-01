@@ -319,13 +319,21 @@ export class MeterService {
 
   /**
    * Fetches raw flow readings from the AWS GET /v1/flow endpoint.
-   * Returns an array of FlowHistoryRecord compatible objects.
+   * Requires device_id, start_time and end_time (Unix seconds).
    */
-  async getReadings(meterId?: string): Promise<FlowHistoryRecord[] | null> {
+  async getReadings(
+    meterId?: string,
+    startTime?: number,
+    endTime?: number
+  ): Promise<FlowHistoryRecord[] | null> {
     try {
+      const params: any = {};
+      if (meterId) params.device_id = meterId;
+      if (typeof startTime === 'number') params.start_time = startTime;
+      if (typeof endTime === 'number') params.end_time = endTime;
       const data: any = await this.safeGet(
         `${API_BASE_URL}/v1/flow`,
-        meterId ? { device_id: meterId } : undefined
+        Object.keys(params).length ? params : undefined
       );
       const records = data?.records || [];
       return records.map((record: any): FlowHistoryRecord => ({

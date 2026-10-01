@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { WaterMeterDataResponse, ModuleState, TimeRangeTab, DeviceOption, DateRange } from '../types/meter.types';
 import { meterService } from '../services/meter.service';
 import { formatLastSeen } from '../utils/formatters';
+import { getIstPeriodRange } from '../utils/ist';
 
 export interface UseWaterMeterDataOptions {
   activeTab?: TimeRangeTab;
@@ -65,12 +66,13 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
     const meterId = selectedDevice.id;
 
     try {
+      const { start, end } = getIstPeriodRange(activeTab, customDateRange, specificDate, selectedMonth, selectedYear);
       const [metadata, metrics, summary, history] =
       await Promise.all([
           meterService.getMeterMetadata(meterId, forceRefresh),
           meterService.getLiveFlowRate(meterId),
           meterService.getConsumption(activeTab, meterId, customDateRange, specificDate, selectedMonth, selectedYear),
-          meterService.getReadings(meterId),
+          meterService.getReadings(meterId, start, end),
       ]);
 
       // Guard against race conditions: ignore response if a newer fetch was started
