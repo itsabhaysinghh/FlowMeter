@@ -110,9 +110,9 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
 
         const effectiveHistory = history || prev?.history || [];
         const effectiveTrend = summary?.flow_trend_chart || prev?.flowTrend || [];
-        // If the backend summary does not provide a flow trend (empty array), derive it from the raw history records.
+        // If the backend summary does not provide a flow trend (empty array), derive it from the raw history records in chronological order.
         const derivedTrend = effectiveTrend.length === 0 && effectiveHistory.length > 0
-          ? effectiveHistory.map((rec) => ({ time: rec.time, flowRate: rec.flowRate }))
+          ? [...effectiveHistory].reverse().map((rec) => ({ time: rec.time, flowRate: rec.flowRate }))
           : [];
         const finalTrend = effectiveTrend.length > 0 ? effectiveTrend : derivedTrend;
 

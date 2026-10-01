@@ -38,7 +38,7 @@ import {
 } from '../utils/ist';
 
 // Retrieve base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://wbeuxrg5l0.execute-api.ap-south-1.amazonaws.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://56um0wqz82.execute-api.ap-south-1.amazonaws.com';
 // An override supports a separately deployed delete route; the local backend uses this API base path.
 const DELETE_FLOW_DATA_API_URL = import.meta.env.VITE_DELETE_FLOW_DATA_API_URL || `${API_BASE_URL}/v1/flow/data`;
 
@@ -336,18 +336,24 @@ export class MeterService {
         Object.keys(params).length ? params : undefined
       );
       const records = data?.records || [];
-      return records.map((record: any): FlowHistoryRecord => ({
-        id: `${record.device_id}-${record.timestamp}`,
-        time: new Date(record.timestamp * 1000).toLocaleString(),
-        duration: `${record.interval_seconds || 60} sec`,
-        flowRate: record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0,
-        totalLitres: record.volume_litres ?? record.volume ?? 0,
-        status: (record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0) > 20
-          ? "Peak"
-          : (record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0) < 5
-          ? "Low Flow"
-          : "Normal",
-      }));
+      return records.map((record: any): FlowHistoryRecord => {
+        const rate = Number(record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0);
+        const volume = Number(record.volume_litres ?? record.volume ?? rate);
+        const interval = Number(record.interval_seconds || 60);
+        const ts = Number(record.timestamp);
+        return {
+          id: `${record.device_id || meterId}-${ts}`,
+          time: formatIstFullDateTime(ts),
+          duration: `${interval} sec`,
+          flowRate: Number(rate.toFixed(2)),
+          totalLitres: Number(volume.toFixed(2)),
+          status: rate > 20
+            ? "Peak"
+            : rate < 5
+            ? "Low Flow"
+            : "Normal",
+        };
+      });
     } catch (err) {
       console.error(err);
       return null;
