@@ -110,6 +110,11 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
 
         const effectiveHistory = history || prev?.history || [];
         const effectiveTrend = summary?.flow_trend_chart || prev?.flowTrend || [];
+        // If the backend summary does not provide a flow trend (empty array), derive it from the raw history records.
+        const derivedTrend = effectiveTrend.length === 0 && effectiveHistory.length > 0
+          ? effectiveHistory.map((rec) => ({ time: rec.time, flowRate: rec.flowRate }))
+          : [];
+        const finalTrend = effectiveTrend.length > 0 ? effectiveTrend : derivedTrend;
 
         const calcConsumption = (summary && summary.total_volume_litres > 0)
           ? summary.total_volume_litres
@@ -139,7 +144,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
                 : effectiveMetrics.averageFlowRate,
           },
           consumptionTrend: effectiveSummary.consumption_chart || prev?.consumptionTrend || [],
-          flowTrend: effectiveTrend,
+          flowTrend: finalTrend,
           history: effectiveHistory,
         };
       });
