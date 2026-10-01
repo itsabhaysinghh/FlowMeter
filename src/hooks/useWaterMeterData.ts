@@ -70,7 +70,7 @@ export function useWaterMeterData(options: UseWaterMeterDataOptions = {}) {
           meterService.getMeterMetadata(meterId, forceRefresh),
           meterService.getLiveFlowRate(meterId),
           meterService.getConsumption(activeTab, meterId, customDateRange, specificDate, selectedMonth, selectedYear),
-          meterService.getFlowHistory(undefined, meterId, activeTab, customDateRange, specificDate, selectedMonth, selectedYear),
+          meterService.getReadings(meterId),
       ]);
 
       // Guard against race conditions: ignore response if a newer fetch was started

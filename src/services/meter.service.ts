@@ -317,6 +317,35 @@ export class MeterService {
     }
   }
 
+  /**
+   * Fetches raw flow readings from the AWS GET /v1/flow endpoint.
+   * Returns an array of FlowHistoryRecord compatible objects.
+   */
+  async getReadings(meterId?: string): Promise<FlowHistoryRecord[] | null> {
+    try {
+      const data: any = await this.safeGet(
+        `${API_BASE_URL}/v1/flow`,
+        meterId ? { device_id: meterId } : undefined
+      );
+      const records = data?.records || [];
+      return records.map((record: any): FlowHistoryRecord => ({
+        id: `${record.device_id}-${record.timestamp}`,
+        time: new Date(record.timestamp * 1000).toLocaleString(),
+        duration: `${record.interval_seconds || 60} sec`,
+        flowRate: record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0,
+        totalLitres: record.volume_litres ?? record.volume ?? 0,
+        status: (record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0) > 20
+          ? "Peak"
+          : (record.avg_flow_rate_lpm ?? record.flow_rate_lpm ?? 0) < 5
+          ? "Low Flow"
+          : "Normal",
+      }));
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  }
+
   private parseDeleteResponse(response: any): DeleteFlowMeterDataResult {
     const body = response.data?.data ?? response.data;
     const isConfirmed = body?.success === true || response.data?.success === true;
