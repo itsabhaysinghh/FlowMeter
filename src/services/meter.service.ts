@@ -37,8 +37,18 @@ import {
   getIstDateInputValue,
 } from '../utils/ist';
 
-// Retrieve base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://56um0wqz82.execute-api.ap-south-1.amazonaws.com';
+/**
+ * Sanitizes and normalizes the API base URL to ensure clean root API Gateway host.
+ * Automatically strips accidental subpaths (e.g. /v1/flow/readings, /v1) and trailing slashes.
+ */
+function cleanApiBaseUrl(rawUrl?: string): string {
+  let url = (rawUrl || '').trim();
+  url = url.replace(/\/+$/, '');
+  url = url.replace(/\/v1(?:\/flow(?:\/readings)?)?$/, '');
+  return url || 'https://56um0wqz82.execute-api.ap-south-1.amazonaws.com';
+}
+
+const API_BASE_URL = cleanApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 // An override supports a separately deployed delete route; the local backend uses this API base path.
 const DELETE_FLOW_DATA_API_URL = import.meta.env.VITE_DELETE_FLOW_DATA_API_URL || `${API_BASE_URL}/v1/flow/data`;
 
@@ -94,7 +104,11 @@ export class MeterService {
             continue;
           }
 
-          console.error(`[meterService] Request failed for ${url}:`, err.message);
+          console.error(
+            `[meterService] Request failed for ${url}:`,
+            status ? `HTTP ${status}` : err.code || 'Error',
+            err.response?.data || err.message
+          );
           return null;
         }
       }

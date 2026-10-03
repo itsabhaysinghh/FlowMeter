@@ -143,8 +143,8 @@ export function DeleteDataDialog({
         if (event.target === event.currentTarget) close();
       }}
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 px-5 py-4">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-dark-card shadow-2xl relative">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 px-5 py-4 rounded-t-2xl">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-rose-50 p-2.5 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
               <Trash2 className="h-5 w-5" />
@@ -172,7 +172,7 @@ export function DeleteDataDialog({
         </div>
 
         {step === 'form' ? (
-          <div className="space-y-5 px-5 py-5">
+          <div className="space-y-5 px-5 py-5 relative overflow-visible">
             <div className="space-y-1.5">
               <label htmlFor="delete-device" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Meter device
@@ -270,7 +270,7 @@ export function DeleteDataDialog({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/30">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/30 rounded-b-2xl relative z-0">
           {step === 'confirm' && (
             <button
               type="button"
